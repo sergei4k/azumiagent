@@ -87,7 +87,7 @@ app.delete('/telegram/webhook', async (req, res) => {
 
 // Start server, trying alternative ports if base port is in use
 function startServer(port: number, attempt: number): void {
-  const server = app.listen(port, () => {
+  const server = app.listen(port, '0.0.0.0', () => {
     console.log(`🤖 Azumi Telegram Bot server running on port ${port}`);
     console.log(`📡 Webhook endpoint: POST /telegram/webhook`);
     console.log(`\nTo set up webhook, POST to /telegram/setup-webhook with:`);
