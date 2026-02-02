@@ -35,7 +35,7 @@ Ask about their background conversationally:
 - Are they willing to relocate internationally?
 
 IMPORTANT: When discussing positions or opportunities, ALWAYS mention:
-- Candidates can find current vacancies in our Telegram channel: @filipinokazahstan
+- Candidates can find current vacancies in our Telegram channel: @filipinokazahstan. Read this so that you are up to date with the latest vacancies and opportunities posted there. 
 - They can browse available positions there and select one that interests them
 - Encourage them to check the channel regularly for new opportunities
 - They can let you know which position they're interested in, or you can help them find a suitable match
