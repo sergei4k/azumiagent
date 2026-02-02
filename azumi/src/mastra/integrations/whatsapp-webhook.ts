@@ -1,21 +1,20 @@
 /**
- * Telegram Webhook Handler
- * Processes incoming messages and routes them to the Azumi agent
+ * WhatsApp Webhook Handler
+ * Processes incoming messages from Twilio and routes them to the Azumi agent
  */
 
 import { mastra } from '../index';
 import {
-  TelegramUpdate,
-  TelegramMessage,
-  sendTelegramMessage,
+  WhatsAppMessage,
+  sendWhatsAppMessage,
   sendLongMessage,
-  sendTypingAction,
   extractFileFromMessage,
-  getFileUrl,
-} from './telegram-client';
+  downloadFile,
+} from './whatsapp-client';
 
-// Store conversation context per user (in production, use Redis or database)
-const userContexts: Map<number, {
+// Store conversation context per user (keyed by phone number)
+// In production, use Redis or database
+const userContexts: Map<string, {
   lastMessageTime: number;
   pendingFiles: {
     type: 'resume' | 'video';
@@ -25,7 +24,7 @@ const userContexts: Map<number, {
     fileUrl?: string;
     duration?: number;
   }[];
-  phoneNumber?: string; // Store phone number when we learn it
+  phoneNumber: string; // Always available for WhatsApp
 }> = new Map();
 
 import { fileStoreByPhone, FileStoreEntry } from './shared-file-store';
@@ -33,7 +32,7 @@ import { fileStoreByPhone, FileStoreEntry } from './shared-file-store';
 /**
  * Store files by phone number (called when we learn the phone number)
  */
-export function storeFilesByPhone(phone: string, userId: number): void {
+export function storeFilesByPhone(phone: string, userId: string): void {
   const context = userContexts.get(userId);
   if (!context || context.pendingFiles.length === 0) return;
 
@@ -61,7 +60,7 @@ export function storeFilesByPhone(phone: string, userId: number): void {
 
   if (files.resumeFile || files.introVideoFile) {
     // Normalize phone number for lookup (must match candidate-intake-tool normalizePhone)
-    const normalizedPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
+    const normalizedPhone = normalizePhone(phone);
     fileStoreByPhone.set(normalizedPhone, files);
     console.log(`📎 Stored files for phone ${normalizedPhone}:`, {
       hasResume: !!files.resumeFile,
@@ -74,7 +73,17 @@ export function storeFilesByPhone(phone: string, userId: number): void {
 
 /** Same as candidate-intake-tool – used for consistent lookup key. */
 function normalizePhone(phone: string): string {
-  return phone.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
+  // Remove whatsapp: prefix if present
+  const cleaned = phone.replace(/^whatsapp:/, '');
+  return cleaned.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
+}
+
+/**
+ * Extract phone number from WhatsApp From field
+ */
+function extractPhoneFromWhatsApp(from: string): string {
+  // Remove whatsapp: prefix
+  return from.replace(/^whatsapp:/, '');
 }
 
 /**
@@ -118,55 +127,49 @@ function extractPhoneFromResponse(response: any): string | null {
 /**
  * Main webhook handler - call this from your HTTP endpoint
  */
-export async function handleTelegramWebhook(update: TelegramUpdate): Promise<void> {
-  const message = update.message;
+export async function handleWhatsAppWebhook(message: WhatsAppMessage): Promise<void> {
+  const from = message.From;
+  const body = message.Body;
+  const phoneNumber = extractPhoneFromWhatsApp(from);
   
-  if (!message) {
-    console.log('Received update without message, skipping');
-    return;
-  }
-
-  const chatId = message.chat.id;
-  const userId = message.from.id;
-  const userFirstName = message.from.first_name;
-  
-  console.log(`📩 Received message from ${userFirstName} (${userId}): ${message.text || '[file]'}`);
+  console.log(`📩 Received WhatsApp message from ${phoneNumber}: ${body || '[file]'}`);
 
   try {
-    // Show typing indicator
-    await sendTypingAction(chatId);
-
     // Initialize or get user context
-    let context = userContexts.get(userId);
+    let context = userContexts.get(phoneNumber);
     if (!context) {
-      context = { lastMessageTime: Date.now(), pendingFiles: [] };
-      userContexts.set(userId, context);
+      context = {
+        lastMessageTime: Date.now(),
+        pendingFiles: [],
+        phoneNumber,
+      };
+      userContexts.set(phoneNumber, context);
     }
     context.lastMessageTime = Date.now();
 
     // Check if user sent a file
     const fileInfo = extractFileFromMessage(message);
     if (fileInfo) {
-      await handleFileUpload(chatId, userId, message, fileInfo);
+      await handleFileUpload(from, phoneNumber, message, fileInfo);
       // If there was a caption, also let the agent process it
-      if (message.caption?.trim()) {
+      if (body?.trim()) {
         const fileLabel = fileInfo.type === 'video' ? 'intro video' : fileInfo.type === 'document' ? 'resume' : 'file';
-        const captionPrompt = `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}.] They also wrote: ${message.caption.trim()}`;
-        await handleTextMessage(chatId, userId, captionPrompt, userFirstName);
+        const captionPrompt = `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}.] They also wrote: ${body.trim()}`;
+        await handleTextMessage(from, phoneNumber, captionPrompt);
       }
       return;
     }
 
     // Handle text message
-    if (message.text) {
-      await handleTextMessage(chatId, userId, message.text, userFirstName);
+    if (body) {
+      await handleTextMessage(from, phoneNumber, body);
     }
 
   } catch (error) {
-    console.error('Error handling Telegram message:', error);
+    console.error('Error handling WhatsApp message:', error);
     
-    await sendTelegramMessage(
-      chatId,
+    await sendWhatsAppMessage(
+      from,
       'I apologize, but I encountered an error processing your message. Please try again or contact us directly at +7 968 599 93 60.'
     );
   }
@@ -176,12 +179,11 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
  * Handle text messages by routing to the agent
  */
 async function handleTextMessage(
-  chatId: number,
-  userId: number,
-  text: string,
-  userFirstName: string
+  from: string,
+  phoneNumber: string,
+  text: string
 ): Promise<void> {
-  const context = userContexts.get(userId);
+  const context = userContexts.get(phoneNumber);
 
   // Pre-store files by phone BEFORE agent runs, so submit tool can find them.
   // We learn phone either from this message (regex) or from a previous turn (stored later via extractPhoneFromResponse).
@@ -189,7 +191,11 @@ async function handleTextMessage(
     const phoneFromMessage = extractPhoneFromMessage(text);
     if (phoneFromMessage) {
       console.log('Pre-storing %d pending file(s) by phone (from message) before agent runs', context.pendingFiles.length);
-      storeFilesByPhone(phoneFromMessage, userId);
+      storeFilesByPhone(phoneFromMessage, phoneNumber);
+    } else {
+      // For WhatsApp, we always have the phone number, so store files immediately
+      console.log('Pre-storing %d pending file(s) by phone (from WhatsApp From field) before agent runs', context.pendingFiles.length);
+      storeFilesByPhone(phoneNumber, phoneNumber);
     }
   }
 
@@ -201,8 +207,8 @@ async function handleTextMessage(
   try {
     response = await agent.generate(text, {
       memory: {
-        thread: `telegram-${userId}`,
-        resource: `telegram-user-${userId}`,
+        thread: `whatsapp-${phoneNumber}`,
+        resource: `whatsapp-user-${phoneNumber}`,
       },
       // Ensure agent continues after tool calls to produce a final message
       maxSteps: 10,
@@ -280,41 +286,42 @@ async function handleTextMessage(
   }
 
   const messageToSend = responseText || 'I apologize, I was unable to generate a response. Please try again.';
-  await sendLongMessage(chatId, messageToSend);
+  await sendLongMessage(from, messageToSend);
 
   // Check if agent learned a phone number and store files by phone
-  const phoneNumber = extractPhoneFromResponse(response);
-  if (phoneNumber) {
-    storeFilesByPhone(phoneNumber, userId);
+  const phoneFromResponse = extractPhoneFromResponse(response);
+  if (phoneFromResponse) {
+    storeFilesByPhone(phoneFromResponse, phoneNumber);
+  } else {
+    // For WhatsApp, we always have the phone number, so store files if we have any
+    if (context?.pendingFiles?.length) {
+      storeFilesByPhone(phoneNumber, phoneNumber);
+    }
   }
 
-  console.log(`📤 Sent response to ${userFirstName} (${userId})`);
+  console.log(`📤 Sent response to ${phoneNumber}`);
 }
 
 /**
  * Handle file uploads (resume, video, photos)
  */
 async function handleFileUpload(
-  chatId: number,
-  userId: number,
-  message: TelegramMessage,
+  from: string,
+  phoneNumber: string,
+  message: WhatsAppMessage,
   fileInfo: {
     fileId: string;
     fileName?: string;
     fileType?: string;
+    fileUrl?: string;
     duration?: number;
-    type: 'document' | 'video' | 'photo';
+    type: 'document' | 'video' | 'image' | 'audio';
   }
 ): Promise<void> {
-  const context = userContexts.get(userId)!;
+  const context = userContexts.get(phoneNumber)!;
   
-  // Get the file URL
-  let fileUrl: string | undefined;
-  try {
-    fileUrl = await getFileUrl(fileInfo.fileId);
-  } catch (error) {
-    console.error('Failed to get file URL:', error);
-  }
+  // Get the file URL (Twilio provides it directly in MediaUrl0)
+  const fileUrl = fileInfo.fileUrl;
 
   // Determine if this is a resume or video
   if (fileInfo.type === 'video' || fileInfo.fileType?.startsWith('video/')) {
@@ -332,8 +339,8 @@ async function handleFileUpload(
       ? ` (${Math.floor(fileInfo.duration / 60)}:${(fileInfo.duration % 60).toString().padStart(2, '0')})`
       : '';
 
-    await sendTelegramMessage(
-      chatId,
+    await sendWhatsAppMessage(
+      from,
       `✅ Thank you! I've received your introduction video${durationInfo}. This will help families get to know you better!\n\nIs there anything else you'd like to add or shall we continue?`
     );
 
@@ -353,22 +360,22 @@ async function handleFileUpload(
       fileUrl,
     });
 
-    await sendTelegramMessage(
-      chatId,
+    await sendWhatsAppMessage(
+      from,
       `✅ Thank you! I've received your resume${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}.\n\nIs there anything else you'd like to share, or shall we continue with your application?`
     );
 
-  } else if (fileInfo.type === 'photo') {
+  } else if (fileInfo.type === 'image') {
     // Photo - could be document photo or profile photo
-    await sendTelegramMessage(
-      chatId,
+    await sendWhatsAppMessage(
+      from,
       `I received your photo. If this is a document (like a certificate), please send it as a file for better quality. If you meant to send your resume or video, please send those as well.`
     );
 
   } else {
     // Unknown file type
-    await sendTelegramMessage(
-      chatId,
+    await sendWhatsAppMessage(
+      from,
       `I received your file${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}. Could you let me know what this is? Is it your resume/CV or introduction video?`
     );
   }
@@ -377,7 +384,7 @@ async function handleFileUpload(
 /**
  * Get pending files for a user (to include in application submission)
  */
-export function getPendingFiles(userId: number): {
+export function getPendingFiles(phoneNumber: string): {
   resumeFile?: {
     fileId: string;
     fileName?: string;
@@ -392,7 +399,7 @@ export function getPendingFiles(userId: number): {
     duration?: number;
   };
 } {
-  const context = userContexts.get(userId);
+  const context = userContexts.get(phoneNumber);
   if (!context) return {};
 
   const result: ReturnType<typeof getPendingFiles> = {};
@@ -423,8 +430,8 @@ export function getPendingFiles(userId: number): {
 /**
  * Clear pending files after submission
  */
-export function clearPendingFiles(userId: number): void {
-  const context = userContexts.get(userId);
+export function clearPendingFiles(phoneNumber: string): void {
+  const context = userContexts.get(phoneNumber);
   if (context) {
     context.pendingFiles = [];
   }
@@ -435,9 +442,9 @@ export function clearPendingFiles(userId: number): void {
  */
 export function cleanupOldContexts(maxAgeMs: number = 24 * 60 * 60 * 1000): void {
   const now = Date.now();
-  for (const [userId, context] of userContexts) {
+  for (const [phoneNumber, context] of userContexts) {
     if (now - context.lastMessageTime > maxAgeMs) {
-      userContexts.delete(userId);
+      userContexts.delete(phoneNumber);
     }
   }
 }

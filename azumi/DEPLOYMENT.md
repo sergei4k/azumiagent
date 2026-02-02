@@ -33,6 +33,7 @@ This guide shows you how to deploy your Telegram bot to run 24/7 in the cloud.
      - `AMOCRM_ACCESS_TOKEN`
      - `AMOCRM_KZPIPELINE`
      - `AMOCRM_STATUS_ID`
+     - `AMOCRM_DRIVE_URL` (optional; for file uploads. If unset, fetched from account. Use if "Access to files" scope is enabled.)
      - `GOOGLE_GENERATIVE_AI_API_KEY`
      - Any other variables you use
 

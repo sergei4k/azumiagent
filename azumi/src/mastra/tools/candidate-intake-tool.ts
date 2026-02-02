@@ -1,7 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import { createCandidateLead } from '../integrations/amocrm';
-import { fileStoreByPhone } from '../integrations/telegram-webhook';
+import { getFileUrl } from '../integrations/telegram-client';
+import { fileStoreByPhone } from '../integrations/shared-file-store';
 
 // In-memory candidate store (in production, replace with database/CRM lookup)
 // This simulates a database of existing candidates
@@ -210,15 +211,17 @@ export const submitCandidateApplicationTool = createTool({
       // Use stored files if not provided in tool call
       if (!finalResumeFile && storedFiles.resumeFile) {
         finalResumeFile = storedFiles.resumeFile;
-        console.log('📎 Auto-injected resume file from file store');
+        console.log('📎 Auto-injected resume from file store (fileId=%s, fileUrl=%s)', storedFiles.resumeFile.fileId, storedFiles.resumeFile.fileUrl ? 'yes' : 'no');
       }
       if (!finalIntroVideoFile && storedFiles.introVideoFile) {
         finalIntroVideoFile = storedFiles.introVideoFile;
-        console.log('📎 Auto-injected video file from file store');
+        console.log('📎 Auto-injected video from file store (fileId=%s, fileUrl=%s)', storedFiles.introVideoFile.fileId, storedFiles.introVideoFile.fileUrl ? 'yes' : 'no');
       }
-      
+
       // Clean up after use
       fileStoreByPhone.delete(normalizedPhone);
+    } else {
+      console.warn('📎 No files in fileStoreByPhone for phone %s – files may not reach amoCRM', normalizedPhone);
     }
     
     // Save to local store
@@ -231,15 +234,31 @@ export const submitCandidateApplicationTool = createTool({
     
     console.log('📝 New Candidate Application Received:');
     console.log(JSON.stringify({ ...data, resumeFile: finalResumeFile, introVideoFile: finalIntroVideoFile }, null, 2));
-    
+
+    // Resolve fileUrl from Telegram when we have fileId but no fileUrl (e.g. getFileUrl failed at store time)
+    async function ensureFileUrl<T extends { fileId: string; fileUrl?: string }>(file: T | undefined, label: string): Promise<T | undefined> {
+      if (!file) return undefined;
+      if (file.fileUrl) return file;
+      try {
+        const url = await getFileUrl(file.fileId);
+        console.log('📎 Resolved %s fileUrl from fileId %s', label, file.fileId);
+        return { ...file, fileUrl: url };
+      } catch (e) {
+        console.warn('📎 Could not resolve %s fileUrl for fileId %s:', label, file.fileId, e);
+        return file;
+      }
+    }
+    const resumeForAmo = await ensureFileUrl(finalResumeFile, 'resume');
+    const videoForAmo = await ensureFileUrl(finalIntroVideoFile, 'video');
+
     // Upload to amoCRM with files
     let amoResult;
     try {
       amoResult = await createCandidateLead({
         ...data,
         applicationId,
-        resumeFile: finalResumeFile,
-        introVideoFile: finalIntroVideoFile,
+        resumeFile: resumeForAmo,
+        introVideoFile: videoForAmo,
       });
       console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
     } catch (error) {

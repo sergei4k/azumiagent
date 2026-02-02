@@ -7,12 +7,15 @@ const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN!;
 const AMOCRM_ACCESS_TOKEN = process.env.AMOCRM_ACCESS_TOKEN!;
 const AMOCRM_PIPELINE_ID = process.env.AMOCRM_KZPIPELINE ? parseInt(process.env.AMOCRM_KZPIPELINE) : undefined;
 const AMOCRM_STATUS_ID = process.env.AMOCRM_STATUS_ID ? parseInt(process.env.AMOCRM_STATUS_ID) : undefined;
+/** Override drive URL for file uploads. If unset, fetched from GET /account?with=drive_url. */
+const AMOCRM_DRIVE_URL = process.env.AMOCRM_DRIVE_URL;
 
 if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
   console.warn('⚠️ amoCRM credentials not configured. Set AMOCRM_SUBDOMAIN and AMOCRM_ACCESS_TOKEN in .env');
 }
 
 const baseUrl = `https://${AMOCRM_SUBDOMAIN}.amocrm.ru/api/v4`;
+let cachedDriveUrl: string | null = null;
 
 interface CandidateData {
   applicationId: string;
@@ -84,78 +87,123 @@ async function amoRequest(endpoint: string, method: string, body?: any, customHe
 }
 
 /**
- * Upload a file to amoCRM and attach it to a lead
- * @param fileUrl - Direct URL to the file (e.g., from Telegram)
- * @param fileName - Name of the file
- * @param entityType - 'leads' or 'contacts'
- * @param entityId - ID of the lead or contact
+ * Get Kommo/amoCRM drive URL for file uploads.
+ * Uses AMOCRM_DRIVE_URL if set, otherwise GET /account?with=drive_url.
+ */
+async function getDriveUrl(): Promise<string> {
+  if (AMOCRM_DRIVE_URL) return AMOCRM_DRIVE_URL;
+  if (cachedDriveUrl) return cachedDriveUrl;
+  const acc = await amoRequest('/account?with=drive_url', 'GET');
+  const url = (acc as any).drive_url;
+  if (!url) throw new Error('amoCRM account has no drive_url. Set AMOCRM_DRIVE_URL or enable "Access to files" scope.');
+  cachedDriveUrl = url.replace(/\/$/, '');
+  return cachedDriveUrl as string;
+}
+
+/**
+ * Kommo Files API: create upload session, upload file in chunks, return file UUID.
+ * See https://developers.kommo.com/reference/create-session and upload-file.
+ */
+async function uploadFileToDrive(
+  fileBytes: Buffer,
+  fileName: string,
+  driveUrl: string
+): Promise<string> {
+  const fileSize = fileBytes.length;
+  const sessionRes = await fetch(`${driveUrl}/v1.0/sessions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${AMOCRM_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ name: fileName, size: fileSize }),
+  });
+  if (!sessionRes.ok) {
+    const err = await sessionRes.text();
+    throw new Error(`Create session failed: ${sessionRes.status} - ${err}`);
+  }
+  const session = (await sessionRes.json()) as {
+    upload_url: string;
+    max_part_size: number;
+    session_id?: number;
+  };
+  const maxPart = session.max_part_size || 131072;
+  let uploadUrl = session.upload_url;
+  let offset = 0;
+  let lastRes: { uuid?: string; next_url?: string } = {};
+  while (offset < fileSize) {
+    const end = Math.min(offset + maxPart, fileSize);
+    const chunk = fileBytes.subarray(offset, end);
+    const partRes = await fetch(uploadUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${AMOCRM_ACCESS_TOKEN}`,
+        'Content-Type': 'application/octet-stream',
+      },
+      body: new Uint8Array(chunk),
+    });
+    if (!partRes.ok) {
+      const err = await partRes.text();
+      throw new Error(`Upload part failed: ${partRes.status} - ${err}`);
+    }
+    lastRes = (await partRes.json()) as { uuid?: string; next_url?: string };
+    if (lastRes.next_url) {
+      uploadUrl = lastRes.next_url;
+      offset = end;
+    } else {
+      break;
+    }
+  }
+  const uuid = lastRes.uuid;
+  if (!uuid) throw new Error('Upload completed but no file UUID returned');
+  return uuid;
+}
+
+/**
+ * Attach files (by UUID) to a lead. Uses PUT /api/v4/leads/{id}/files.
+ */
+async function attachFilesToLead(leadId: number, fileUuids: string[]): Promise<void> {
+  if (fileUuids.length === 0) return;
+  const res = await fetch(`${baseUrl}/leads/${leadId}/files`, {
+    method: 'PUT',
+    headers: {
+      'Authorization': `Bearer ${AMOCRM_ACCESS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(fileUuids.map((uuid) => ({ file_uuid: uuid }))),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Attach files failed: ${res.status} - ${err}`);
+  }
+}
+
+/**
+ * Download file from URL, upload to Kommo drive, attach to lead.
+ * Files are stored as real CRM attachments on Kommo/amoCRM file storage (not link strings).
+ * Hosting: Kommo drive (default). Override via AMOCRM_DRIVE_URL.
  */
 async function uploadFileToAmoCRM(
   fileUrl: string,
   fileName: string,
   entityType: 'leads' | 'contacts',
   entityId: number
-): Promise<number> {
-  try {
-    // Download the file from the URL
-    console.log(`📥 Downloading file from ${fileUrl}...`);
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      throw new Error(`Failed to download file: ${fileResponse.status}`);
-    }
-
-    const fileBuffer = await fileResponse.arrayBuffer();
-    const fileBytes = Buffer.from(fileBuffer);
-    
-    // Get file extension and MIME type
-    const fileExtension = fileName.split('.').pop()?.toLowerCase() || '';
-    const mimeType = fileResponse.headers.get('content-type') || 
-                     (fileExtension === 'pdf' ? 'application/pdf' :
-                      fileExtension === 'doc' ? 'application/msword' :
-                      fileExtension === 'docx' ? 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' :
-                      fileExtension === 'mp4' ? 'video/mp4' :
-                      'application/octet-stream');
-
-    // Create multipart form data manually for Node.js
-    const boundary = `----WebKitFormBoundary${Math.random().toString(36).substring(2, 15)}`;
-    const formDataParts: Buffer[] = [];
-    
-    // Add file field
-    formDataParts.push(Buffer.from(`--${boundary}\r\n`));
-    formDataParts.push(Buffer.from(`Content-Disposition: form-data; name="file"; filename="${fileName}"\r\n`));
-    formDataParts.push(Buffer.from(`Content-Type: ${mimeType}\r\n\r\n`));
-    formDataParts.push(fileBytes);
-    formDataParts.push(Buffer.from(`\r\n--${boundary}--\r\n`));
-    
-    const formDataBuffer = Buffer.concat(formDataParts);
-
-    // Upload file to amoCRM using /upload endpoint
-    // amoCRM v4 API: POST /api/v4/{entity_type}/{entity_id}/files
-    const uploadResponse = await fetch(`${baseUrl}/${entityType}/${entityId}/files`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${AMOCRM_ACCESS_TOKEN}`,
-        'Content-Type': `multipart/form-data; boundary=${boundary}`,
-      },
-      body: formDataBuffer,
-    });
-
-    if (!uploadResponse.ok) {
-      const errorText = await uploadResponse.text();
-      console.error('File upload error:', errorText);
-      throw new Error(`Failed to upload file to amoCRM: ${uploadResponse.status} - ${errorText}`);
-    }
-
-    const uploadResult = await uploadResponse.json();
-    const fileId = uploadResult._embedded?.files?.[0]?.id || uploadResult.id;
-    
-    console.log(`✅ File uploaded to amoCRM: ${fileName} (ID: ${fileId})`);
-    return fileId;
-  } catch (error) {
-    console.error(`❌ Failed to upload file ${fileName} to amoCRM:`, error);
-    // Re-throw so caller can handle fallback
-    throw error;
+): Promise<string> {
+  console.log(`📥 Downloading file from ${fileUrl}...`);
+  const fileResponse = await fetch(fileUrl);
+  if (!fileResponse.ok) {
+    throw new Error(`Failed to download file: ${fileResponse.status}`);
   }
+  const fileBuffer = await fileResponse.arrayBuffer();
+  const fileBytes = Buffer.from(fileBuffer);
+  const driveUrl = await getDriveUrl();
+  const uuid = await uploadFileToDrive(fileBytes, fileName, driveUrl);
+  console.log(`📤 Uploaded to Kommo drive: ${fileName} (UUID: ${uuid})`);
+  if (entityType === 'leads') {
+    await attachFilesToLead(entityId, [uuid]);
+    console.log(`✅ Attached to lead ${entityId}: ${fileName}`);
+  }
+  return uuid;
 }
 
 /**
@@ -314,10 +362,14 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
   ]);
 
   // Upload files as attachments to the lead
-  if (data.resumeFile?.fileUrl) {
-    try {
-      const fileName = data.resumeFile.fileName || `resume_${data.fullName.replace(/\s+/g, '_')}.pdf`;
-      await uploadFileToAmoCRM(data.resumeFile.fileUrl, fileName, 'leads', leadId);
+  if (data.resumeFile) {
+    if (!data.resumeFile.fileUrl) {
+      console.warn('📎 Skipping resume upload to amoCRM: no fileUrl (fileId=%s)', data.resumeFile.fileId);
+    } else {
+      try {
+        const fileName = data.resumeFile.fileName || `resume_${data.fullName.replace(/\s+/g, '_')}.pdf`;
+        console.log('📤 Uploading resume to amoCRM: %s', fileName);
+        await uploadFileToAmoCRM(data.resumeFile.fileUrl, fileName, 'leads', leadId);
       
       // Also add a note with the file reference
       await amoRequest('/leads/notes', 'POST', [
@@ -341,13 +393,18 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
           },
         },
       ]);
+      }
     }
   }
 
-  if (data.introVideoFile?.fileUrl) {
-    try {
-      const fileName = data.introVideoFile.fileName || `intro_video_${data.fullName.replace(/\s+/g, '_')}.mp4`;
-      await uploadFileToAmoCRM(data.introVideoFile.fileUrl, fileName, 'leads', leadId);
+  if (data.introVideoFile) {
+    if (!data.introVideoFile.fileUrl) {
+      console.warn('📎 Skipping intro video upload to amoCRM: no fileUrl (fileId=%s)', data.introVideoFile.fileId);
+    } else {
+      try {
+        const fileName = data.introVideoFile.fileName || `intro_video_${data.fullName.replace(/\s+/g, '_')}.mp4`;
+        console.log('📤 Uploading intro video to amoCRM: %s', fileName);
+        await uploadFileToAmoCRM(data.introVideoFile.fileUrl, fileName, 'leads', leadId);
       
       // Also add a note with the file reference
       const durationInfo = data.introVideoFile.duration
@@ -374,6 +431,7 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
           },
         },
       ]);
+      }
     }
   }
 

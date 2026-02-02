@@ -10,6 +10,8 @@
     "start": "mastra start",
     "telegram": "tsx src/mastra/integrations/telegram-server.ts",
     "telegram:prod": "node --loader tsx src/mastra/integrations/telegram-server.ts",
+    "whatsapp": "tsx src/mastra/integrations/whatsapp-server.ts",
+    "whatsapp:prod": "node --loader tsx src/mastra/integrations/whatsapp-server.ts",
     "amocrm:pipelines": "tsx src/mastra/integrations/get-amocrm-pipelines.ts"
   },
   "keywords": [],
@@ -29,6 +31,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "tsx": "^4.19.0",
+    "twilio": "^5.3.5",
     "zod": "^4.3.5"
   },
   "devDependencies": {
