@@ -279,7 +279,8 @@ async function handleTextMessage(
     }
   }
 
-  const messageToSend = responseText || 'I apologize, I was unable to generate a response. Please try again.';
+  const raw = responseText || 'I apologize, I was unable to generate a response. Please try again.';
+  const messageToSend = raw.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
   await sendLongMessage(chatId, messageToSend);
 
   // Check if agent learned a phone number and store files by phone
