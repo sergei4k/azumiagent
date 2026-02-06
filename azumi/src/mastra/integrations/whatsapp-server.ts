@@ -11,6 +11,7 @@ import 'dotenv/config';
 import express from 'express';
 import { handleWhatsAppWebhook } from './whatsapp-webhook';
 import { WhatsAppMessage } from './whatsapp-client';
+import { initDb } from '../../../db';
 
 const app = express();
 
@@ -63,7 +64,16 @@ app.post('/whatsapp/webhook', async (req, res) => {
 });
 
 // Start server, trying alternative ports if base port is in use
-function startServer(port: number, attempt: number): void {
+async function startServer(port: number, attempt: number): Promise<void> {
+  // Initialize database (create table and add missing columns)
+  try {
+    await initDb();
+    console.log('✅ Database initialized successfully');
+  } catch (error) {
+    console.error('❌ Failed to initialize database:', error);
+    // Don't exit - server can still start, but DB operations will fail
+  }
+
   const server = app.listen(port, '0.0.0.0', () => {
     console.log(`🤖 Azumi WhatsApp Bot server running on port ${port}`);
     console.log(`📡 Webhook endpoint: POST /whatsapp/webhook`);

@@ -28,6 +28,7 @@ const userContexts: Map<string, {
 }> = new Map();
 
 import { fileStoreByPhone, FileStoreEntry } from './shared-file-store';
+import { uploadFileFromUrl } from './google-drive';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -320,9 +321,19 @@ async function handleFileUpload(
   }
 ): Promise<void> {
   const context = userContexts.get(phoneNumber)!;
-  
+
   // Get the file URL (Twilio provides it directly in MediaUrl0)
-  const fileUrl = fileInfo.fileUrl;
+  let fileUrl = fileInfo.fileUrl;
+
+  // Upload to Google Drive for permanent storage (replaces fileUrl with Drive link if configured)
+  if (fileUrl) {
+    const driveResult = await uploadFileFromUrl(
+      fileUrl,
+      fileInfo.fileName || (fileInfo.type === 'video' ? 'intro-video.mp4' : 'resume.pdf'),
+      fileInfo.fileType
+    );
+    if (driveResult) fileUrl = driveResult.downloadUrl;
+  }
 
   // Determine if this is a resume or video
   if (fileInfo.type === 'video' || fileInfo.fileType?.startsWith('video/')) {

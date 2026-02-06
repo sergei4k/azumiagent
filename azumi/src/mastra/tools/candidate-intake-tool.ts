@@ -365,17 +365,6 @@ export const checkRequirementsTool = createTool({
       });
     }
 
-    if (positionType === 'maternity-nurse') {
-      baseRequirements.push({
-        category: 'Maternity Nurse Specific',
-        items: [
-          'Maternity nurse qualification',
-          'Newborn care certification',
-          'Breastfeeding support training',
-        ],
-        mandatory: true,
-      });
-    }
 
     return { requirements: baseRequirements };
   },

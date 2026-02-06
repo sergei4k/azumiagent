@@ -9,14 +9,44 @@ const pool = mysql.createPool({
 });
 
 export async function initDb() {
+    // Create table if it doesn't exist
     const createTableQuery = `
     CREATE TABLE IF NOT EXISTS candidates (
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
         phone VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        UNIQUE KEY uniq_phone (phone)
     )`;
     await pool.execute(createTableQuery);
+
+    // Check if columns exist and add them if missing (for tables created manually)
+    const [columns] = await pool.execute(`
+        SELECT COLUMN_NAME 
+        FROM INFORMATION_SCHEMA.COLUMNS 
+        WHERE TABLE_SCHEMA = DATABASE() 
+        AND TABLE_NAME = 'candidates'
+    `) as any[];
+
+    const existingColumns = columns.map((col: any) => col.COLUMN_NAME);
+
+    if (!existingColumns.includes('name')) {
+        await pool.execute(`
+            ALTER TABLE candidates 
+            ADD COLUMN name VARCHAR(255) NOT NULL
+        `);
+    }
+
+    if (!existingColumns.includes('phone')) {
+        await pool.execute(`
+            ALTER TABLE candidates 
+            ADD COLUMN phone VARCHAR(255) NOT NULL
+        `);
+    }
+
+    if (!existingColumns.includes('created_at')) {
+        await pool.execute(`
+            ALTER TABLE candidates 
+            ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        `);
+    }
 }

@@ -29,6 +29,7 @@ const userContexts: Map<number, {
 }> = new Map();
 
 import { fileStoreByPhone, FileStoreEntry } from './shared-file-store';
+import { uploadFileFromUrl } from './google-drive';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -315,6 +316,16 @@ async function handleFileUpload(
     fileUrl = await getFileUrl(fileInfo.fileId);
   } catch (error) {
     console.error('Failed to get file URL:', error);
+  }
+
+  // Upload to Google Drive for permanent storage (replaces fileUrl with Drive link if configured)
+  if (fileUrl) {
+    const driveResult = await uploadFileFromUrl(
+      fileUrl,
+      fileInfo.fileName || (fileInfo.type === 'video' ? 'intro-video.mp4' : 'resume.pdf'),
+      fileInfo.fileType
+    );
+    if (driveResult) fileUrl = driveResult.downloadUrl;
   }
 
   // Determine if this is a resume or video
