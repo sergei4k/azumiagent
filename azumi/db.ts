@@ -50,3 +50,44 @@ export async function initDb() {
         `);
     }
 }
+
+// Save a candidate to the database
+export async function saveCandidate(data: {
+    name: string;
+    phone: string;
+}): Promise<number> {
+    const [result] = await pool.execute(
+        `INSERT INTO candidates (name, phone) VALUES (?, ?)`,
+        [data.name, data.phone]
+    ) as any[];
+    return result.insertId;
+}
+
+// Look up a candidate by phone or name
+export async function findCandidate(params: {
+    phone?: string;
+    name?: string;
+}): Promise<{
+    id: number;
+    name: string;
+    phone: string;
+    created_at: Date;
+} | null> {
+    if (params.phone) {
+        const [rows] = await pool.execute(
+            `SELECT * FROM candidates WHERE phone = ? LIMIT 1`,
+            [params.phone]
+        ) as any[];
+        return rows.length > 0 ? rows[0] : null;
+    }
+    
+    if (params.name) {
+        const [rows] = await pool.execute(
+            `SELECT * FROM candidates WHERE name = ? LIMIT 1`,
+            [params.name]
+        ) as any[];
+        return rows.length > 0 ? rows[0] : null;
+    }
+    
+    return null;
+}

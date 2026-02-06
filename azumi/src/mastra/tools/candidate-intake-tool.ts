@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createCandidateLead } from '../integrations/amocrm';
 import { getFileUrl } from '../integrations/telegram-client';
 import { fileStoreByPhone } from '../integrations/shared-file-store';
+import { saveCandidate, findCandidate } from '../../../db';
 
 // In-memory candidate store (in production, replace with database/CRM lookup)
 // This simulates a database of existing candidates
@@ -52,40 +53,59 @@ export const lookupCandidateTool = createTool({
     message: z.string(),
   }),
   execute: async ({ phone, email, fullName }) => {
-    // In production: Query your database or CRM here
-    // Example: const candidate = await db.candidates.findFirst({ where: { OR: [{ phone }, { email }] } });
+    // Search in SQL database first
+    let dbCandidate = null;
     
+    if (phone) {
+      dbCandidate = await findCandidate({ phone });
+    }
+    
+    if (!dbCandidate && fullName) {
+      dbCandidate = await findCandidate({ name: fullName });
+    }
+    
+    // Also check in-memory store (for backward compatibility during transition)
     let foundCandidate: StoredCandidate | undefined;
     
-    // Search by phone (most reliable)
-    if (phone) {
-      const normalizedSearch = normalizePhone(phone);
-      for (const [, candidate] of candidateStore) {
-        if (normalizePhone(candidate.phone) === normalizedSearch) {
-          foundCandidate = candidate;
-          break;
+    if (dbCandidate) {
+      // Convert DB result to StoredCandidate format
+      foundCandidate = {
+        applicationId: `DB-${dbCandidate.id}`,
+        fullName: dbCandidate.name,
+        phone: dbCandidate.phone,
+        status: 'pending', // Default status since DB doesn't store this yet
+        appliedAt: dbCandidate.created_at.toISOString(),
+        lastContactAt: new Date().toISOString(),
+      };
+    } else {
+      // Fallback to in-memory store
+      if (phone) {
+        const normalizedSearch = normalizePhone(phone);
+        for (const [, candidate] of candidateStore) {
+          if (normalizePhone(candidate.phone) === normalizedSearch) {
+            foundCandidate = candidate;
+            break;
+          }
         }
       }
-    }
-    
-    // Search by email if not found by phone
-    if (!foundCandidate && email) {
-      const emailLower = email.toLowerCase();
-      for (const [, candidate] of candidateStore) {
-        if (candidate.email?.toLowerCase() === emailLower) {
-          foundCandidate = candidate;
-          break;
+      
+      if (!foundCandidate && email) {
+        const emailLower = email.toLowerCase();
+        for (const [, candidate] of candidateStore) {
+          if (candidate.email?.toLowerCase() === emailLower) {
+            foundCandidate = candidate;
+            break;
+          }
         }
       }
-    }
-    
-    // Search by name as last resort (less reliable due to variations)
-    if (!foundCandidate && fullName) {
-      const nameLower = fullName.toLowerCase().trim();
-      for (const [, candidate] of candidateStore) {
-        if (candidate.fullName.toLowerCase().trim() === nameLower) {
-          foundCandidate = candidate;
-          break;
+      
+      if (!foundCandidate && fullName) {
+        const nameLower = fullName.toLowerCase().trim();
+        for (const [, candidate] of candidateStore) {
+          if (candidate.fullName.toLowerCase().trim() === nameLower) {
+            foundCandidate = candidate;
+            break;
+          }
         }
       }
     }
@@ -224,7 +244,19 @@ export const submitCandidateApplicationTool = createTool({
       console.warn('📎 No files in fileStoreByPhone for phone %s – files may not reach amoCRM', normalizedPhone);
     }
     
-    // Save to local store
+    // Save to SQL database
+    try {
+      await saveCandidate({
+        name: data.fullName,
+        phone: data.phone,
+      });
+      console.log('✅ Candidate saved to SQL database:', data.fullName, data.phone);
+    } catch (error) {
+      console.error('❌ Failed to save candidate to database:', error);
+      // Continue anyway - don't fail the application if DB is down
+    }
+    
+    // Also save to local store (for backward compatibility)
     saveCandidateToStore({
       applicationId,
       fullName: data.fullName,
