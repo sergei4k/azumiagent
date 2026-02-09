@@ -111,7 +111,7 @@ function saveCandidateToStore(data: {
 // Tool to submit candidate application for nanny/governess positions
 export const submitCandidateApplicationTool = createTool({
   id: 'submit-candidate-application',
-  description: 'Submit a candidate application when you have collected all required information from a potential nanny/governess. Use this tool once you have gathered their basic details, experience, and qualifications.',
+  description: 'Submit a candidate application when you have collected required information from a potential nanny/governess. Do not ask about years of experience or experience with children; collect basic details and qualifications only.',
   inputSchema: z.object({
     // Personal Information
     fullName: z.string().describe('Full legal name of the candidate'),
@@ -121,21 +121,6 @@ export const submitCandidateApplicationTool = createTool({
     currentLocation: z.string().describe('Current city and country of residence'),
     dateOfBirth: z.string().optional().describe('Date of birth (optional)'),
     
-    // Languages
-    languages: z.array(z.object({
-      language: z.string(),
-      fluency: z.enum(['native', 'fluent', 'intermediate', 'basic']),
-    })).describe('Languages spoken with fluency level'),
-    
-    // Experience
-    ageGroupsWorkedWith: z.array(z.enum([
-      'newborn (0-1)',
-      'toddler (1-3)',
-      'preschool (3-5)',
-      'school-age (5-12)',
-      'teenager (12+)',
-    ])).describe('Age groups the candidate has experience with'),
-    previousPositions: z.string().describe('Brief summary of previous nanny/governess positions'),
     
     // Qualifications
     educationSummary: z.string().describe('Highest education level and relevant certifications'),

@@ -25,12 +25,7 @@ interface CandidateData {
   preferredContactMethod: string;
   nationality: string;
   currentLocation: string;
-  dateOfBirth?: string;
-  languages: { language: string; fluency: string }[];
-  ageGroupsWorkedWith: string[];
-  previousPositions: string;
-  educationSummary: string;
-  specializations?: string[];
+
   availableFrom: string;
   preferredArrangement: string;
   willingToRelocate: boolean;
@@ -295,19 +290,8 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 • Телефон: ${data.phone}
 
 
-${data.dateOfBirth ? `• Дата рождения: ${data.dateOfBirth}` : ''}
 
-🌍 Языки:
-${data.languages.map(l => `• ${l.language} - ${l.fluency}`).join('\n')}
 
-💼 Опыт:
-• Возрастные группы: ${data.ageGroupsWorkedWith.join(', ')}
-• Предыдущие позиции: ${data.previousPositions}
-
-🎓 Образование:
-${data.educationSummary}
-
-${data.specializations?.length ? `✨ Специализации:\n${data.specializations.map(s => `• ${s}`).join('\n')}` : ''}
 
 📋 Документы:
 • Паспорт: ${data.hasValidPassport ? 'Да' : 'Нет'}
