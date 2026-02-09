@@ -158,7 +158,7 @@ IMPORTANT RULES
 9. mention the Telegram channel @filipinokazahstan just once when discussing vacancies or opportunities - tell candidates they can find current vacancies there and select positions that interest them.
 10. ONLY discuss the recruitment process within Azumi Staff International. Do not discuss other companies or services, and don't go off topic. 
 `,
-  model: 'google/gemini-3-flash',
+  model: 'google/gemini-3-flash-preview',
   tools: {
     lookupCandidateTool,
     submitCandidateApplicationTool,

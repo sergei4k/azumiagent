@@ -164,12 +164,20 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
     }
 
   } catch (error) {
-    console.error('Error handling Telegram message:', error);
+    const errId = `TG-${Date.now().toString(36)}`;
+    const errMessage = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error(`[${errId}] Telegram webhook error:`, errMessage);
+    if (errStack) console.error(errStack);
     
-    await sendTelegramMessage(
-      chatId,
-      'I apologize, but I encountered an error processing your message. Please try again or contact us directly at +7 968 599 93 60.'
-    );
+    try {
+      await sendTelegramMessage(
+        chatId,
+        'I apologize, but I encountered an error processing your message. Please try again or contact us directly at +7 968 599 93 60.'
+      );
+    } catch (sendErr) {
+      console.error(`[${errId}] Failed to send error message to user:`, sendErr);
+    }
   }
 }
 

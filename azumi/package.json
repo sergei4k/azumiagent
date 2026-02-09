@@ -12,7 +12,8 @@
     "telegram:prod": "node --loader tsx src/mastra/integrations/telegram-server.ts",
     "whatsapp": "tsx src/mastra/integrations/whatsapp-server.ts",
     "whatsapp:prod": "node --loader tsx src/mastra/integrations/whatsapp-server.ts",
-    "amocrm:pipelines": "tsx src/mastra/integrations/get-amocrm-pipelines.ts"
+    "amocrm:pipelines": "tsx src/mastra/integrations/get-amocrm-pipelines.ts",
+    "db:add-candidate": "tsx scripts/add-candidate.ts"
   },
   "keywords": [],
   "author": "",

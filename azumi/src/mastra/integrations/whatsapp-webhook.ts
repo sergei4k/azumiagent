@@ -167,12 +167,20 @@ export async function handleWhatsAppWebhook(message: WhatsAppMessage): Promise<v
     }
 
   } catch (error) {
-    console.error('Error handling WhatsApp message:', error);
-    
-    await sendWhatsAppMessage(
-      from,
-      'I apologize, but I encountered an error processing your message. Please try again or contact us directly at +7 968 599 93 60.'
-    );
+    const errId = `WA-${Date.now().toString(36)}`;
+    const errMessage = error instanceof Error ? error.message : String(error);
+    const errStack = error instanceof Error ? error.stack : undefined;
+    console.error(`[${errId}] WhatsApp webhook error:`, errMessage);
+    if (errStack) console.error(errStack);
+
+    try {
+      await sendWhatsAppMessage(
+        from,
+        'I apologize, but I encountered an error processing your message. Please try again or contact us directly at +7 968 599 93 60.'
+      );
+    } catch (sendErr) {
+      console.error(`[${errId}] Failed to send error message to user:`, sendErr);
+    }
   }
 }
 
