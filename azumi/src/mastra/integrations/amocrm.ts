@@ -43,7 +43,6 @@ interface CandidateData {
     fileUrl?: string;
     duration?: number;
   };
-  hasValidPassport: boolean;
   additionalNotes?: string;
 }
 
@@ -294,7 +293,6 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 
 
 📋 Документы:
-• Паспорт: ${data.hasValidPassport ? 'Да' : 'Нет'}
 ${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}` : '• Резюме: не предоставлено'}
 ${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})` : '• Видео: не предоставлено'}
 

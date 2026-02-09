@@ -35,6 +35,7 @@ This guide shows you how to deploy your Telegram bot to run 24/7 in the cloud.
      - `AMOCRM_STATUS_ID`
      - `AMOCRM_DRIVE_URL` (optional; for file uploads. If unset, fetched from account. Use if "Access to files" scope is enabled.)
      - `GOOGLE_GENERATIVE_AI_API_KEY`
+     - **Google Drive (OAuth for personal Gmail):** `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REFRESH_TOKEN`, `GOOGLE_DRIVE_FOLDER_ID` – run `npm run google-drive:token` locally once to get the refresh token
      - Any other variables you use
 
 5. **Get Your Public URL**

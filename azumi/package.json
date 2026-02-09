@@ -13,7 +13,8 @@
     "whatsapp": "tsx src/mastra/integrations/whatsapp-server.ts",
     "whatsapp:prod": "node --loader tsx src/mastra/integrations/whatsapp-server.ts",
     "amocrm:pipelines": "tsx src/mastra/integrations/get-amocrm-pipelines.ts",
-    "db:add-candidate": "tsx scripts/add-candidate.ts"
+    "db:add-candidate": "tsx scripts/add-candidate.ts",
+    "google-drive:token": "tsx scripts/get-google-drive-token.ts"
   },
   "keywords": [],
   "author": "",
