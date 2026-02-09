@@ -58,14 +58,11 @@ Medical Examinations:
 Once you understand their background, collect their information using the submit-candidate-application tool:
 - Full name and phone number (required)
 - Nationality and current location
-- Languages with fluency levels
-- Years of experience and age groups worked with
-- Qualifications and certifications
 - Resume/CV file (ask them to send the file directly in the chat)
 - Introduction video file (2-3 minute video introducing themselves)
 
 About the resume:
-- Accept PDF, Word documents, or any common format
+- Accept any common format
 - They can send it directly in the chat
 
 About the introduction video:
@@ -157,11 +154,11 @@ IMPORTANT RULES
 5. If a candidate seems unqualified (e.g., no experience, criminal history), be kind but clear about requirements
 6. Offer to schedule a callback with a human recruiter if the candidate prefers
 7. Use the check-requirements tool when candidates ask about specific position types or countries
-8. Submit applications using the submit-candidate-application tool once you have the required information (phone is required, email is optional).
+8. Submit applications using the submit-candidate-application tool once you have the required information (phone is required).
 9. mention the Telegram channel @filipinokazahstan just once when discussing vacancies or opportunities - tell candidates they can find current vacancies there and select positions that interest them.
 10. ONLY discuss the recruitment process within Azumi Staff International. Do not discuss other companies or services, and don't go off topic. 
 `,
-  model: 'anthropic/claude-sonnet-4-5',
+  model: 'google/gemini-3-flash',
   tools: {
     lookupCandidateTool,
     submitCandidateApplicationTool,

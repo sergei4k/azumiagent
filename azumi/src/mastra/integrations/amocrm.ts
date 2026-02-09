@@ -27,10 +27,8 @@ interface CandidateData {
   currentLocation: string;
   dateOfBirth?: string;
   languages: { language: string; fluency: string }[];
-  yearsOfExperience: number;
   ageGroupsWorkedWith: string[];
   previousPositions: string;
-  hasFirstAidCertificate: boolean;
   educationSummary: string;
   specializations?: string[];
   availableFrom: string;
@@ -282,7 +280,7 @@ export async function createCandidateLead(data: CandidateData): Promise<{
   }
 
   // Build lead name
-  const leadName = `Кандидат: ${data.fullName} | ${data.yearsOfExperience} лет опыта`;
+  const leadName = `Кандидат: ${data.fullName}`;
 
   // Create comprehensive note with all candidate details
   const noteText = `📝 Заявка через чат-бот Azumi
@@ -295,15 +293,14 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 • Национальность: ${data.nationality}
 • Местоположение: ${data.currentLocation}
 • Телефон: ${data.phone}
-• Предпочитаемый способ связи: ${data.preferredContactMethod}
-${data.email ? `• Email: ${data.email}` : ''}
+
+
 ${data.dateOfBirth ? `• Дата рождения: ${data.dateOfBirth}` : ''}
 
 🌍 Языки:
 ${data.languages.map(l => `• ${l.language} - ${l.fluency}`).join('\n')}
 
 💼 Опыт:
-• Стаж: ${data.yearsOfExperience} лет
 • Возрастные группы: ${data.ageGroupsWorkedWith.join(', ')}
 • Предыдущие позиции: ${data.previousPositions}
 
@@ -313,7 +310,6 @@ ${data.educationSummary}
 ${data.specializations?.length ? `✨ Специализации:\n${data.specializations.map(s => `• ${s}`).join('\n')}` : ''}
 
 📋 Документы:
-• Первая помощь: ${data.hasFirstAidCertificate ? 'Да' : 'Нет'}
 • Паспорт: ${data.hasValidPassport ? 'Да' : 'Нет'}
 ${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}` : '• Резюме: не предоставлено'}
 ${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})` : '• Видео: не предоставлено'}

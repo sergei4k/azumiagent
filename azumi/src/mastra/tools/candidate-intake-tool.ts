@@ -53,78 +53,38 @@ export const lookupCandidateTool = createTool({
     message: z.string(),
   }),
   execute: async ({ phone, email, fullName }) => {
-    // Search in SQL database first
+    // Single source of truth: SQL stores name + phone; we use it to decide returning vs new
     let dbCandidate = null;
-    
+
     if (phone) {
       dbCandidate = await findCandidate({ phone });
     }
-    
     if (!dbCandidate && fullName) {
       dbCandidate = await findCandidate({ name: fullName });
     }
-    
-    // Also check in-memory store (for backward compatibility during transition)
-    let foundCandidate: StoredCandidate | undefined;
-    
+    // Email is not in SQL; returning vs new is determined only by name + phone
+
     if (dbCandidate) {
-      // Convert DB result to StoredCandidate format
-      foundCandidate = {
-        applicationId: `DB-${dbCandidate.id}`,
+      const appliedAt = dbCandidate.created_at instanceof Date
+        ? dbCandidate.created_at.toISOString()
+        : new Date(dbCandidate.created_at as string).toISOString();
+      const foundCandidate: StoredCandidate = {
+        applicationId: `AZM-${dbCandidate.id}`,
         fullName: dbCandidate.name,
         phone: dbCandidate.phone,
-        status: 'pending', // Default status since DB doesn't store this yet
-        appliedAt: dbCandidate.created_at.toISOString(),
+        status: 'pending',
+        appliedAt,
         lastContactAt: new Date().toISOString(),
       };
-    } else {
-      // Fallback to in-memory store
-      if (phone) {
-        const normalizedSearch = normalizePhone(phone);
-        for (const [, candidate] of candidateStore) {
-          if (normalizePhone(candidate.phone) === normalizedSearch) {
-            foundCandidate = candidate;
-            break;
-          }
-        }
-      }
-      
-      if (!foundCandidate && email) {
-        const emailLower = email.toLowerCase();
-        for (const [, candidate] of candidateStore) {
-          if (candidate.email?.toLowerCase() === emailLower) {
-            foundCandidate = candidate;
-            break;
-          }
-        }
-      }
-      
-      if (!foundCandidate && fullName) {
-        const nameLower = fullName.toLowerCase().trim();
-        for (const [, candidate] of candidateStore) {
-          if (candidate.fullName.toLowerCase().trim() === nameLower) {
-            foundCandidate = candidate;
-            break;
-          }
-        }
-      }
-    }
-    
-    if (foundCandidate) {
-      // Update last contact time
-      foundCandidate.lastContactAt = new Date().toISOString();
-      
-      console.log(`🔍 Returning candidate found: ${foundCandidate.fullName} (${foundCandidate.applicationId})`);
-      
+      console.log(`🔍 Returning candidate (from SQL): ${foundCandidate.fullName} (${foundCandidate.applicationId})`);
       return {
         found: true,
         candidate: foundCandidate,
         message: `Welcome back! Found existing application ${foundCandidate.applicationId} for ${foundCandidate.fullName}, status: ${foundCandidate.status}`,
       };
     }
-    
-    console.log(`🔍 No existing candidate found for: ${phone || email || fullName}`);
-    
+
+    console.log(`🔍 No existing candidate in SQL for: ${phone || fullName || email}`);
     return {
       found: false,
       candidate: undefined,
@@ -155,9 +115,8 @@ export const submitCandidateApplicationTool = createTool({
   inputSchema: z.object({
     // Personal Information
     fullName: z.string().describe('Full legal name of the candidate'),
-    email: z.string().email().optional().describe('Email address (optional if phone/WhatsApp provided)'),
     phone: z.string().describe('Phone number with country code - PRIMARY CONTACT METHOD'),
-    preferredContactMethod: z.enum(['phone', 'whatsapp', 'email', 'telegram']).describe('How the candidate prefers to be contacted'),
+    
     nationality: z.string().describe('Country of citizenship'),
     currentLocation: z.string().describe('Current city and country of residence'),
     dateOfBirth: z.string().optional().describe('Date of birth (optional)'),
@@ -169,7 +128,6 @@ export const submitCandidateApplicationTool = createTool({
     })).describe('Languages spoken with fluency level'),
     
     // Experience
-    yearsOfExperience: z.number().min(0).describe('Total years of childcare experience'),
     ageGroupsWorkedWith: z.array(z.enum([
       'newborn (0-1)',
       'toddler (1-3)',
@@ -180,7 +138,6 @@ export const submitCandidateApplicationTool = createTool({
     previousPositions: z.string().describe('Brief summary of previous nanny/governess positions'),
     
     // Qualifications
-    hasFirstAidCertificate: z.boolean().describe('Whether candidate has valid First Aid certification'),
     educationSummary: z.string().describe('Highest education level and relevant certifications'),
     specializations: z.array(z.string()).optional().describe('Special skills like newborn care, special needs, tutoring subjects, music, sports'),
     
@@ -261,7 +218,7 @@ export const submitCandidateApplicationTool = createTool({
       applicationId,
       fullName: data.fullName,
       phone: data.phone,
-      email: data.email,
+      
     });
     
     console.log('📝 New Candidate Application Received:');
@@ -289,6 +246,7 @@ export const submitCandidateApplicationTool = createTool({
       amoResult = await createCandidateLead({
         ...data,
         applicationId,
+        preferredContactMethod: 'phone',
         resumeFile: resumeForAmo,
         introVideoFile: videoForAmo,
       });
@@ -299,10 +257,7 @@ export const submitCandidateApplicationTool = createTool({
     }
     
     const nextSteps = [
-      'Our recruitment team will review your application within 2-3 business days',
-      data.email 
-        ? 'You will receive an email with next steps and required documents'
-        : `We will contact you via ${data.preferredContactMethod} with next steps and required documents`,
+      'Our recruitment team will review your application within 2-3 business days',,
     ];
     
     // Add reminders for missing documents
@@ -378,24 +333,11 @@ export const checkRequirementsTool = createTool({
         category: 'Qualifications',
         items: [
           'Relevant childcare education or certification',
-          'First Aid Certificate',
           'CPR certification (recommended)',
         ],
         mandatory: positionType === 'governess' || positionType === 'maternity-nurse',
       },
     ];
-
-    if (positionType === 'governess') {
-      baseRequirements.push({
-        category: 'Education (Governess)',
-        items: [
-          'University degree (preferably in education)',
-          'Teaching certification or experience',
-          'Fluency in at least 2 languages',
-        ],
-        mandatory: true,
-      });
-    }
 
 
     return { requirements: baseRequirements };
