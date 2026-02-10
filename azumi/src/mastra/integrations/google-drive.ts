@@ -23,6 +23,7 @@ function getAuth() {
   const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
   const refreshToken = process.env.GOOGLE_REFRESH_TOKEN?.trim();
   if (clientId && clientSecret && refreshToken) {
+    console.log('Google Drive: using OAuth client credentials');
     const oauth2Client = new google.auth.OAuth2(
       clientId,
       clientSecret,
@@ -30,6 +31,13 @@ function getAuth() {
     );
     oauth2Client.setCredentials({ refresh_token: refreshToken });
     return oauth2Client;
+  }
+
+  if ((clientId || clientSecret) && !refreshToken) {
+    console.warn(
+      'Google Drive: GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET set but GOOGLE_REFRESH_TOKEN is missing. ' +
+        'Falling back to service account credentials (if configured).'
+    );
   }
 
   // Service account
@@ -40,6 +48,7 @@ function getAuth() {
   )?.trim();
   const keyPath = process.env.GOOGLE_DRIVE_KEY_FILE_PATH?.trim();
   if (json && json.length > 50) {
+    console.log('Google Drive: using service account JSON credentials');
     try {
       // Handle multi-line JSON (replace newlines and extra spaces)
       const cleanedJson = json.replace(/\n/g, '').replace(/\s+/g, ' ').trim();
@@ -52,6 +61,7 @@ function getAuth() {
       // If cleaning didn't work, try parsing as-is (some env parsers handle multi-line)
       try {
         const credentials = JSON.parse(json);
+        console.log('Google Drive: using raw service account JSON credentials');
         return new google.auth.GoogleAuth({
           credentials,
           scopes: SCOPES,
@@ -62,6 +72,7 @@ function getAuth() {
     }
   }
   if (keyPath) {
+    console.log('Google Drive: using service account key file credentials');
     return new google.auth.GoogleAuth({
       keyFile: keyPath,
       scopes: SCOPES,
