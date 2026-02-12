@@ -23,3 +23,16 @@ export type FileStoreEntry = {
 };
 
 export const fileStoreByPhone: Map<string, FileStoreEntry> = new Map();
+
+// ── Web upload store ────────────────────────────────────────────────────
+// Files uploaded via the web upload page (for large files that exceed Telegram bot limits).
+// Keyed by Telegram userId so the webhook handler can merge them into pendingFiles.
+export type WebUploadEntry = {
+  type: 'video' | 'resume';
+  fileUrl: string;
+  fileName: string;
+  fileType?: string;
+  uploadedAt: number;
+};
+
+export const webUploadsByUserId: Map<number, WebUploadEntry[]> = new Map();

@@ -34,6 +34,7 @@
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "googleapis": "^171.4.0",
+    "multer": "^2.0.2",
     "mysql2": "^3.16.3",
     "pg": "^8.13.1",
     "tsx": "^4.19.0",
@@ -42,6 +43,7 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.21",
+    "@types/multer": "^2.0.0",
     "@types/node": "^25.2.0",
     "mastra": "^1.0.1",
     "typescript": "^5.9.3"

@@ -89,6 +89,73 @@ export type UploadResult = {
 };
 
 /**
+ * Upload a Buffer directly to Google Drive (used by web upload page for large files).
+ * Shares the file as "anyone with the link can view" so downloadUrl is usable by AmoCRM.
+ */
+export async function uploadFileBuffer(
+  buffer: Buffer,
+  fileName: string,
+  mimeType?: string,
+  folderId?: string
+): Promise<UploadResult | null> {
+  const auth = getAuth();
+  if (!auth) {
+    console.warn('Google Drive: no credentials configured. Skipping upload.');
+    return null;
+  }
+
+  const drive = google.drive({ version: 'v3', auth });
+  const targetFolderId = (folderId || process.env.GOOGLE_DRIVE_FOLDER_ID)?.trim();
+
+  if (!targetFolderId) {
+    console.error('Google Drive: GOOGLE_DRIVE_FOLDER_ID is required.');
+    return null;
+  }
+
+  if (buffer.length === 0) {
+    console.warn('Google Drive: skipping empty file', fileName);
+    return null;
+  }
+
+  console.log('Google Drive: uploading buffer to folder', targetFolderId, `(${(buffer.length / (1024 * 1024)).toFixed(1)} MB)`);
+
+  const fileMetadata: { name: string; parents: string[] } = {
+    name: fileName || 'candidate-file',
+    parents: [targetFolderId],
+  };
+
+  const mime = mimeType || 'application/octet-stream';
+
+  try {
+    const createRes = await drive.files.create({
+      requestBody: fileMetadata,
+      media: { mimeType: mime, body: Readable.from(buffer) },
+      fields: 'id, webViewLink',
+      supportsAllDrives: true,
+    });
+
+    const fileId = createRes.data.id;
+    if (!fileId) throw new Error('No file id returned');
+
+    await drive.permissions.create({
+      fileId,
+      requestBody: { type: 'anyone', role: 'reader' },
+      supportsAllDrives: true,
+    });
+
+    const webViewLink = createRes.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
+    const downloadUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+
+    console.log('Google Drive: uploaded', fileName, '->', fileId);
+    return { fileId, webViewLink, downloadUrl };
+  } catch (e: any) {
+    const msg = e?.message || e?.errors?.[0]?.message || String(e);
+    console.error('Google Drive: buffer upload failed:', msg);
+    return null;
+  }
+}
+
+/**
  * Download file from sourceUrl and upload to Google Drive.
  * Shares the file as "anyone with the link can view" so downloadUrl is usable by AmoCRM.
  */

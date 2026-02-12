@@ -28,8 +28,9 @@ const userContexts: Map<number, {
   phoneNumber?: string; // Store phone number when we learn it
 }> = new Map();
 
-import { fileStoreByPhone, FileStoreEntry } from './shared-file-store';
+import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
+import { generateUploadLink } from './file-upload-server';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -144,6 +145,22 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
       userContexts.set(userId, context);
     }
     context.lastMessageTime = Date.now();
+
+    // Pick up any files uploaded via the web upload page
+    const webUploads = webUploadsByUserId.get(userId);
+    if (webUploads?.length) {
+      for (const upload of webUploads) {
+        context.pendingFiles.push({
+          type: upload.type,
+          fileId: `web-upload-${upload.uploadedAt}`,
+          fileName: upload.fileName,
+          fileType: upload.fileType,
+          fileUrl: upload.fileUrl,
+        });
+        console.log(`📎 Merged web-uploaded ${upload.type} into pendingFiles for user ${userId}: ${upload.fileName}`);
+      }
+      webUploadsByUserId.delete(userId);
+    }
 
     // Check if user sent a file
     const fileInfo = extractFileFromMessage(message);
@@ -330,12 +347,28 @@ async function handleFileUpload(
     );
 
     const isVideo = fileInfo.type === 'video' || fileInfo.fileType?.startsWith('video/');
-    await sendTelegramMessage(
-      chatId,
-      isVideo
-        ? `Your video is too large for Telegram bots to download (about ${sizeMb} MB). Telegram only allows bots to download files up to around 20 MB.\n\nPlease send a shorter or more compressed introduction video (up to ~20 MB), or send a link to the video (for example on Google Drive or YouTube).`
-        : `Your file is too large for Telegram bots to download (about ${sizeMb} MB). Telegram only allows bots to download files up to around 20 MB.\n\nPlease send a smaller version or a shareable link instead.`
-    );
+
+    if (isVideo) {
+      // Generate a web upload link so the candidate can upload directly
+      const uploadUrl = generateUploadLink({
+        chatId,
+        userId,
+        userFirstName: message.from.first_name,
+      });
+
+      await sendTelegramMessage(
+        chatId,
+        `Your video is too large for Telegram (about ${sizeMb} MB). ` +
+          `No worries! Please tap the link below to upload it directly:\n\n` +
+          `${uploadUrl}\n\n` +
+          `Just tap, pick the video from your gallery, and it will be uploaded automatically.`
+      );
+    } else {
+      await sendTelegramMessage(
+        chatId,
+        `Your file is too large for Telegram bots to download (about ${sizeMb} MB). Telegram only allows bots to download files up to around 20 MB.\n\nPlease send a smaller version or a shareable link instead.`
+      );
+    }
 
     return;
   }

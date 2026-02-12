@@ -11,7 +11,7 @@ import 'dotenv/config';
 import express from 'express';
 import { handleTelegramWebhook } from './telegram-webhook';
 import { setWebhook, getWebhookInfo, deleteWebhook } from './telegram-client';
-import { initDb } from '../../../db';
+import { createUploadRouter } from './file-upload-server';
 
 const app = express();
 app.use(express.json());
@@ -24,6 +24,9 @@ const PORT_MAX_ATTEMPTS = 10;
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', service: 'azumi-telegram-bot' });
 });
+
+// Web upload routes (for large files that exceed Telegram bot limits)
+app.use(createUploadRouter());
 
 // Telegram webhook endpoint
 app.post('/telegram/webhook', async (req, res) => {
@@ -88,18 +91,10 @@ app.delete('/telegram/webhook', async (req, res) => {
 
 // Start server, trying alternative ports if base port is in use
 async function startServer(port: number, attempt: number): Promise<void> {
-  // Initialize database (create table and add missing columns)
-  try {
-    await initDb();
-    console.log('✅ Database initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    // Don't exit - server can still start, but DB operations will fail
-  }
-
   const server = app.listen(port, '0.0.0.0', () => {
     console.log(`🤖 Azumi Telegram Bot server running on port ${port}`);
     console.log(`📡 Webhook endpoint: POST /telegram/webhook`);
+    console.log(`📤 Upload page:     GET  /upload/:token`);
     console.log(`\nTo set up webhook, POST to /telegram/setup-webhook with:`);
     console.log(`  { "webhookUrl": "https://your-domain.com" }`);
   });
