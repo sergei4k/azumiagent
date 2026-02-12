@@ -312,18 +312,45 @@ async function handleFileUpload(
     fileId: string;
     fileName?: string;
     fileType?: string;
+    fileSize?: number;
     duration?: number;
     type: 'document' | 'video' | 'photo';
   }
 ): Promise<void> {
   const context = userContexts.get(userId)!;
-  
-  // Get the file URL
+
+  // Telegram Bot API limit: bots can only download files up to ~20 MB.
+  // For larger files, Telegram returns "Bad Request: file is too big".
+  const MAX_DOWNLOAD_SIZE_BYTES = 18 * 1024 * 1024; // 18 MB safety margin
+
+  if (fileInfo.fileSize && fileInfo.fileSize > MAX_DOWNLOAD_SIZE_BYTES) {
+    const sizeMb = (fileInfo.fileSize / (1024 * 1024)).toFixed(1);
+    console.warn(
+      `Telegram file too large to download via bot API (${sizeMb} MB). file_id=${fileInfo.fileId}`
+    );
+
+    const isVideo = fileInfo.type === 'video' || fileInfo.fileType?.startsWith('video/');
+    await sendTelegramMessage(
+      chatId,
+      isVideo
+        ? `Your video is too large for Telegram bots to download (about ${sizeMb} MB). Telegram only allows bots to download files up to around 20 MB.\n\nPlease send a shorter or more compressed introduction video (up to ~20 MB), or send a link to the video (for example on Google Drive or YouTube).`
+        : `Your file is too large for Telegram bots to download (about ${sizeMb} MB). Telegram only allows bots to download files up to around 20 MB.\n\nPlease send a smaller version or a shareable link instead.`
+    );
+
+    return;
+  }
+
+  // Get the file URL from Telegram
   let fileUrl: string | undefined;
   try {
     fileUrl = await getFileUrl(fileInfo.fileId);
   } catch (error) {
     console.error('Failed to get file URL:', error);
+    await sendTelegramMessage(
+      chatId,
+      `😔 I couldn't download your file due to a Telegram error ("${(error as Error).message}"). This often happens when the file is too large for bots.\n\nPlease try sending a smaller file (up to ~20 MB) or share a link instead.`
+    );
+    return;
   }
 
   // Upload to Google Drive for permanent storage (replaces fileUrl with Drive link if configured)

@@ -1,25 +1,8 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { createCandidateLead } from '../integrations/amocrm';
+import { createCandidateLead, searchCandidateInCRM } from '../integrations/amocrm';
 import { getFileUrl } from '../integrations/telegram-client';
 import { fileStoreByPhone } from '../integrations/shared-file-store';
-import { saveCandidate, findCandidate } from '../../../db';
-
-// In-memory candidate store (in production, replace with database/CRM lookup)
-// This simulates a database of existing candidates
-interface StoredCandidate {
-  applicationId: string;
-  fullName: string;
-  phone: string;
-  email?: string;
-  status: 'pending' | 'in-review' | 'interview-scheduled' | 'documents-pending' | 'matched' | 'placed' | 'rejected' | 'inactive';
-  appliedAt: string;
-  lastContactAt: string;
-  notes?: string;
-}
-
-// Simulated database - in production, this would be your actual DB/CRM
-const candidateStore: Map<string, StoredCandidate> = new Map();
 
 // Helper to normalize phone numbers for comparison
 function normalizePhone(phone: string): string {
@@ -53,38 +36,38 @@ export const lookupCandidateTool = createTool({
     message: z.string(),
   }),
   execute: async ({ phone, email, fullName }) => {
-    // Single source of truth: SQL stores name + phone; we use it to decide returning vs new
-    let dbCandidate = null;
+    // Single source of truth: amoCRM stores all candidates and leads
+    const crmResult = await searchCandidateInCRM({ phone, name: fullName, email });
 
-    if (phone) {
-      dbCandidate = await findCandidate({ phone });
-    }
-    if (!dbCandidate && fullName) {
-      dbCandidate = await findCandidate({ name: fullName });
-    }
-    // Email is not in SQL; returning vs new is determined only by name + phone
+    if (crmResult.found && crmResult.contact) {
+      const contact = crmResult.contact;
+      const latestLead = crmResult.leads[0]; // Most recent lead (sorted by date desc)
 
-    if (dbCandidate) {
-      const appliedAt = dbCandidate.created_at instanceof Date
-        ? dbCandidate.created_at.toISOString()
-        : new Date(dbCandidate.created_at as string).toISOString();
-      const foundCandidate: StoredCandidate = {
-        applicationId: `AZM-${dbCandidate.id}`,
-        fullName: dbCandidate.name,
-        phone: dbCandidate.phone,
-        status: 'pending',
-        appliedAt,
-        lastContactAt: new Date().toISOString(),
-      };
-      console.log(`🔍 Returning candidate (from SQL): ${foundCandidate.fullName} (${foundCandidate.applicationId})`);
+      const status = latestLead?.status || 'pending';
+      const appliedAt = latestLead?.createdAt || new Date().toISOString();
+      const applicationId = latestLead ? `AZM-${latestLead.id}` : `CRM-${contact.id}`;
+
+      console.log(`🔍 Returning candidate (from amoCRM): ${contact.name} (${applicationId}), status: ${status}`);
+
       return {
         found: true,
-        candidate: foundCandidate,
-        message: `Welcome back! Found existing application ${foundCandidate.applicationId} for ${foundCandidate.fullName}, status: ${foundCandidate.status}`,
+        candidate: {
+          applicationId,
+          fullName: contact.name,
+          phone: contact.phone || phone || '',
+          email: contact.email,
+          status,
+          appliedAt,
+          lastContactAt: new Date().toISOString(),
+          notes: crmResult.leads.length > 1
+            ? `${crmResult.leads.length} applications found in CRM. Latest status: ${status}`
+            : undefined,
+        },
+        message: `Welcome back! Found existing application ${applicationId} for ${contact.name}, current status: ${status}`,
       };
     }
 
-    console.log(`🔍 No existing candidate in SQL for: ${phone || fullName || email}`);
+    console.log(`🔍 No existing candidate in amoCRM for: ${phone || fullName || email}`);
     return {
       found: false,
       candidate: undefined,
@@ -92,21 +75,6 @@ export const lookupCandidateTool = createTool({
     };
   },
 });
-
-// Helper function to save candidate to store (called after successful application)
-function saveCandidateToStore(data: {
-  applicationId: string;
-  fullName: string;
-  phone: string;
-  email?: string;
-}): void {
-  candidateStore.set(data.applicationId, {
-    ...data,
-    status: 'pending',
-    appliedAt: new Date().toISOString(),
-    lastContactAt: new Date().toISOString(),
-  });
-}
 
 // Tool to submit candidate application for nanny/governess positions
 export const submitCandidateApplicationTool = createTool({
@@ -186,25 +154,7 @@ export const submitCandidateApplicationTool = createTool({
       console.warn('📎 No files in fileStoreByPhone for phone %s – files may not reach amoCRM', normalizedPhone);
     }
     
-    // Save to SQL database
-    try {
-      await saveCandidate({
-        name: data.fullName,
-        phone: data.phone,
-      });
-      console.log('✅ Candidate saved to SQL database:', data.fullName, data.phone);
-    } catch (error) {
-      console.error('❌ Failed to save candidate to database:', error);
-      // Continue anyway - don't fail the application if DB is down
-    }
-    
-    // Also save to local store (for backward compatibility)
-    saveCandidateToStore({
-      applicationId,
-      fullName: data.fullName,
-      phone: data.phone,
-      
-    });
+    // amoCRM is the single source of truth – no separate SQL save needed
     
     console.log('📝 New Candidate Application Received:');
     console.log(JSON.stringify({ ...data, resumeFile: finalResumeFile, introVideoFile: finalIntroVideoFile }, null, 2));

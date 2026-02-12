@@ -6,7 +6,7 @@
  * Loads .env from azumi root. Run from azumi directory.
  */
 import 'dotenv/config';
-import { initDb, saveCandidate } from '../db';
+import { initDb, saveCandidate } from '../db-pg';
 
 const name = process.argv[2];
 const phone = process.argv[3];

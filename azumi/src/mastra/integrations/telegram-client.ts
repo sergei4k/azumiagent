@@ -198,6 +198,7 @@ export function extractFileFromMessage(message: TelegramMessage): {
   fileId: string;
   fileName?: string;
   fileType?: string;
+  fileSize?: number;
   duration?: number;
   type: 'document' | 'video' | 'photo';
 } | null {
@@ -206,6 +207,7 @@ export function extractFileFromMessage(message: TelegramMessage): {
       fileId: message.document.file_id,
       fileName: message.document.file_name,
       fileType: message.document.mime_type,
+      fileSize: message.document.file_size,
       type: 'document',
     };
   }
@@ -215,6 +217,7 @@ export function extractFileFromMessage(message: TelegramMessage): {
       fileId: message.video.file_id,
       fileName: message.video.file_name,
       fileType: message.video.mime_type,
+      fileSize: message.video.file_size,
       duration: message.video.duration,
       type: 'video',
     };
@@ -225,6 +228,7 @@ export function extractFileFromMessage(message: TelegramMessage): {
     const largestPhoto = message.photo[message.photo.length - 1];
     return {
       fileId: largestPhoto.file_id,
+      fileSize: largestPhoto.file_size,
       fileType: 'image/jpeg',
       type: 'photo',
     };

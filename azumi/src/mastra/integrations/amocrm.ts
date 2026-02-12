@@ -75,7 +75,10 @@ async function amoRequest(endpoint: string, method: string, body?: any, customHe
     throw new Error(`amoCRM API error: ${response.status} - ${error}`);
   }
 
-  return response.json();
+  // amoCRM returns 204 with empty body when search has no results
+  const text = await response.text();
+  if (!text) return {};
+  return JSON.parse(text);
 }
 
 /**
@@ -196,6 +199,127 @@ async function uploadFileToAmoCRM(
     console.log(`✅ Attached to lead ${entityId}: ${fileName}`);
   }
   return uuid;
+}
+
+// ── CRM Candidate Search ──────────────────────────────────────────────
+
+/** Cached pipeline status_id → human-readable status name. */
+let pipelineStatusCache: Map<number, string> | null = null;
+
+async function getPipelineStatusNames(): Promise<Map<number, string>> {
+  if (pipelineStatusCache) return pipelineStatusCache;
+  try {
+    const res = await amoRequest('/leads/pipelines', 'GET');
+    const map = new Map<number, string>();
+    for (const pipeline of res?._embedded?.pipelines || []) {
+      for (const status of pipeline?._embedded?.statuses || []) {
+        map.set(status.id, status.name);
+      }
+    }
+    pipelineStatusCache = map;
+    return map;
+  } catch (e) {
+    console.error('Failed to fetch pipeline statuses:', e);
+    return new Map();
+  }
+}
+
+/**
+ * Search amoCRM for an existing candidate by phone, email, or name.
+ * Returns contact info and their linked leads with real pipeline statuses.
+ */
+export async function searchCandidateInCRM(params: {
+  phone?: string;
+  name?: string;
+  email?: string;
+}): Promise<{
+  found: boolean;
+  contact?: {
+    id: number;
+    name: string;
+    phone?: string;
+    email?: string;
+  };
+  leads: Array<{
+    id: number;
+    name: string;
+    status: string;
+    createdAt: string;
+    url: string;
+  }>;
+}> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    console.warn('amoCRM not configured, cannot search candidates');
+    return { found: false, leads: [] };
+  }
+
+  // Search in priority order: phone → email → name
+  const queries = [params.phone, params.email, params.name].filter(Boolean) as string[];
+
+  for (const query of queries) {
+    try {
+      const contactRes = await amoRequest(
+        `/contacts?query=${encodeURIComponent(query)}&with=leads`,
+        'GET',
+      );
+      const contacts = contactRes?._embedded?.contacts;
+      if (!contacts?.length) continue;
+
+      const contact = contacts[0];
+
+      // Extract phone and email from custom fields
+      let contactPhone: string | undefined;
+      let contactEmail: string | undefined;
+      for (const field of contact.custom_fields_values || []) {
+        if (field.field_code === 'PHONE') contactPhone = field.values?.[0]?.value;
+        if (field.field_code === 'EMAIL') contactEmail = field.values?.[0]?.value;
+      }
+
+      // Get linked lead IDs from embedded data
+      const embeddedLeads: Array<{ id: number }> = contact._embedded?.leads || [];
+
+      // Fetch full details for each lead (limit to 5 most recent)
+      const statusMap = await getPipelineStatusNames();
+      const leads: Array<{ id: number; name: string; status: string; createdAt: string; url: string }> = [];
+
+      for (const ref of embeddedLeads.slice(0, 5)) {
+        try {
+          const lead = await amoRequest(`/leads/${ref.id}`, 'GET');
+          leads.push({
+            id: lead.id,
+            name: lead.name || `Lead #${lead.id}`,
+            status: statusMap.get(lead.status_id) || `Unknown status (${lead.status_id})`,
+            createdAt: lead.created_at
+              ? new Date(lead.created_at * 1000).toISOString()
+              : 'unknown',
+            url: `https://${AMOCRM_SUBDOMAIN}.amocrm.ru/leads/detail/${lead.id}`,
+          });
+        } catch (e) {
+          console.warn(`Could not fetch lead ${ref.id}:`, e);
+        }
+      }
+
+      // Sort leads by creation date, most recent first
+      leads.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      console.log(`🔍 amoCRM: found contact "${contact.name}" (ID: ${contact.id}) with ${leads.length} lead(s)`);
+      return {
+        found: true,
+        contact: {
+          id: contact.id,
+          name: contact.name,
+          phone: contactPhone,
+          email: contactEmail,
+        },
+        leads,
+      };
+    } catch (error) {
+      console.error(`amoCRM search failed for "${query}":`, error);
+    }
+  }
+
+  console.log(`🔍 amoCRM: no candidate found for: ${queries.join(', ')}`);
+  return { found: false, leads: [] };
 }
 
 /**

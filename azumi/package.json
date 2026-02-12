@@ -30,10 +30,12 @@
     "@mastra/loggers": "^1.0.0",
     "@mastra/memory": "^1.0.0",
     "@mastra/observability": "^1.0.0",
+    "@mastra/pg": "^1.2.0",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "googleapis": "^171.4.0",
     "mysql2": "^3.16.3",
+    "pg": "^8.13.1",
     "tsx": "^4.19.0",
     "twilio": "^5.3.5",
     "zod": "^4.3.5"
