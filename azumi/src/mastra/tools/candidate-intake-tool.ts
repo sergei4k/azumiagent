@@ -100,6 +100,9 @@ export const submitCandidateApplicationTool = createTool({
     willingToRelocate: z.boolean().describe('Whether candidate is willing to relocate internationally'),
     preferredCountries: z.array(z.string()).optional().describe('Countries where candidate would like to work'),
     
+    hasValidVisa: z.boolean().describe('Whether the candidate currently has a valid work visa for the country they want to work in'),
+    visaDetails: z.string().optional().describe('Visa type and country it is valid for (e.g., "UK Tier 5 Youth Mobility", "UAE residence visa", "Schengen work permit"). Leave empty if no visa.'),
+    
     // Documents & Media (file references from messaging platform or URLs)
     resumeFile: z.object({
       fileId: z.string().describe('File ID from messaging platform (WhatsApp, Telegram) or storage service'),

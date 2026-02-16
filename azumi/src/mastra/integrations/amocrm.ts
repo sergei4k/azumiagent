@@ -17,6 +17,18 @@ if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
 const baseUrl = `https://${AMOCRM_SUBDOMAIN}.amocrm.ru/api/v4`;
 let cachedDriveUrl: string | null = null;
 
+/**
+ * Convert a Google Drive download URL to a viewable link.
+ * Input:  https://drive.google.com/uc?export=download&id=ABC123
+ * Output: https://drive.google.com/file/d/ABC123/view
+ */
+function driveViewLink(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
+  return url; // already a view link or other URL — return as-is
+}
+
 interface CandidateData {
   applicationId: string;
   fullName: string;
@@ -412,13 +424,14 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 • Местоположение: ${data.currentLocation}
 • Телефон: ${data.phone}
 
-
-
+🛂 Виза:
+• Есть действующая виза: ${(data as any).hasValidVisa ? 'Да' : 'Нет'}
+${(data as any).visaDetails ? `• Детали визы: ${(data as any).visaDetails}` : ''}
 
 
 📋 Документы:
-${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}` : '• Резюме: не предоставлено'}
-${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})` : '• Видео: не предоставлено'}
+${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}${data.resumeFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}` : '• Резюме: не предоставлено'}
+${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})${data.introVideoFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.introVideoFile.fileUrl)}` : ''}` : '• Видео: не предоставлено'}
 
 📅 Доступность:
 • Готов начать: ${data.availableFrom}
