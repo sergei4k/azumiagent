@@ -3,9 +3,11 @@
  * Creates leads and contacts in amoCRM from candidate applications
  */
 
+import { getResumeSummary } from './resume-summary';
+
 const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN!;
 const AMOCRM_ACCESS_TOKEN = process.env.AMOCRM_ACCESS_TOKEN!;
-const AMOCRM_PIPELINE_ID = process.env.AMOCRM_KZPIPELINE ? parseInt(process.env.AMOCRM_KZPIPELINE) : undefined;
+const AMOCRM_PIPELINE_ID = process.env.AMOCRM_QL_PIPELINE ? parseInt(process.env.AMOCRM_QL_PIPELINE) : undefined;
 const AMOCRM_STATUS_ID = process.env.AMOCRM_STATUS_ID ? parseInt(process.env.AMOCRM_STATUS_ID) : undefined;
 /** Override drive URL for file uploads. If unset, fetched from GET /account?with=drive_url. */
 const AMOCRM_DRIVE_URL = process.env.AMOCRM_DRIVE_URL;
@@ -412,6 +414,21 @@ export async function createCandidateLead(data: CandidateData): Promise<{
   // Build lead name
   const leadName = `Кандидат: ${data.fullName}`;
 
+  // Generate resume summary from uploaded file (PDF/DOCX) for the note
+  let resumeSummary = '';
+  if (data.resumeFile?.fileUrl) {
+    try {
+      resumeSummary = await getResumeSummary(
+        data.resumeFile.fileUrl,
+        data.resumeFile.fileType,
+        data.resumeFile.fileName
+      );
+      if (resumeSummary) console.log('📄 Resume summary generated for amoCRM note');
+    } catch (e) {
+      console.warn('Resume summary skipped:', e);
+    }
+  }
+
   // Create comprehensive note with all candidate details
   const noteText = `📝 Заявка через чат-бот Azumi
 
@@ -427,7 +444,7 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 🛂 Виза:
 • Есть действующая виза: ${(data as any).hasValidVisa ? 'Да' : 'Нет'}
 ${(data as any).visaDetails ? `• Детали визы: ${(data as any).visaDetails}` : ''}
-
+${resumeSummary ? `\n📄 Краткое содержание резюме:\n${resumeSummary}\n` : ''}
 
 📋 Документы:
 ${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}${data.resumeFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}` : '• Резюме: не предоставлено'}
