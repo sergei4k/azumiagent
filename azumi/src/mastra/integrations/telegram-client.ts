@@ -63,6 +63,8 @@ export interface TelegramUpdate {
   message?: TelegramMessage;
 }
 
+import { logTelegramMessage } from '../../../db-pg';
+
 /**
  * Send a text message to a Telegram chat
  */
@@ -92,7 +94,27 @@ export async function sendTelegramMessage(
     throw new Error(`Telegram API error: ${data.description}`);
   }
 
-  return data.result;
+  const msg: TelegramMessage = data.result;
+
+  // Log outgoing bot message
+  try {
+    const numericChatId =
+      typeof chatId === 'number'
+        ? chatId
+        : Number(chatId);
+    const userId = numericChatId || msg.chat.id;
+
+    await logTelegramMessage({
+      chatId: numericChatId || msg.chat.id,
+      userId,
+      sender: 'bot',
+      text,
+    });
+  } catch (e) {
+    console.warn('Failed to log outgoing Telegram message:', e);
+  }
+
+  return msg;
 }
 
 /**

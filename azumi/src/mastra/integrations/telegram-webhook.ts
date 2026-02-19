@@ -31,6 +31,7 @@ const userContexts: Map<number, {
 import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
+import { logTelegramMessage } from '../../../db-pg';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -133,6 +134,29 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
   const userFirstName = message.from.first_name;
   
   console.log(`📩 Received message from ${userFirstName} (${userId}): ${message.text || '[file]'}`);
+
+  // Log incoming user message (text or caption or file placeholder)
+  try {
+    const userText =
+      message.text?.trim() ||
+      message.caption?.trim() ||
+      (message.document
+        ? `[document: ${message.document.file_name || message.document.file_id}]`
+        : message.video
+        ? `[video: ${message.video.file_name || message.video.file_id}]`
+        : message.photo
+        ? '[photo]'
+        : '[non-text message]');
+
+    await logTelegramMessage({
+      chatId,
+      userId,
+      sender: 'user',
+      text: userText,
+    });
+  } catch (e) {
+    console.warn('Failed to log incoming Telegram message:', e);
+  }
 
   try {
     // Show typing indicator
@@ -381,7 +405,7 @@ async function handleFileUpload(
     console.error('Failed to get file URL:', error);
     await sendTelegramMessage(
       chatId,
-      `😔 I couldn't download your file due to a Telegram error ("${(error as Error).message}"). This often happens when the file is too large for bots.\n\nPlease try sending a smaller file (up to ~20 MB) or share a link instead.`
+      `I couldn't download your file due to a Telegram error ("${(error as Error).message}"). This often happens when the file is too large for bots.\n\nPlease try sending a smaller file (up to ~20 MB) or share a link instead.`
     );
     return;
   }

@@ -12,6 +12,7 @@ import express from 'express';
 import { handleTelegramWebhook } from './telegram-webhook';
 import { setWebhook, getWebhookInfo, deleteWebhook } from './telegram-client';
 import { createUploadRouter } from './file-upload-server';
+import { getRecentChats, getChatMessages } from '../../../db-pg';
 
 const app = express();
 app.use(express.json());
@@ -27,6 +28,31 @@ app.get('/health', (req, res) => {
 
 // Web upload routes (for large files that exceed Telegram bot limits)
 app.use(createUploadRouter());
+
+// Simple JSON admin API for chat history
+app.get('/admin/chats', async (_req, res) => {
+  try {
+    const chats = await getRecentChats();
+    res.json(chats);
+  } catch (error) {
+    console.error('Error fetching recent chats:', error);
+    res.status(500).json({ error: 'Failed to fetch chats' });
+  }
+});
+
+app.get('/admin/chats/:chatId', async (req, res) => {
+  const chatIdNum = Number(req.params.chatId);
+  if (!Number.isFinite(chatIdNum)) {
+    return res.status(400).json({ error: 'Invalid chatId' });
+  }
+  try {
+    const messages = await getChatMessages(chatIdNum);
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching chat messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
 
 // Telegram webhook endpoint
 app.post('/telegram/webhook', async (req, res) => {

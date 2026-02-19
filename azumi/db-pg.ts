@@ -17,10 +17,14 @@ const pool = connectionString
       database: process.env.PGDATABASE || process.env.POSTGRES_DB || 'postgres',
     });
 
+// ── Shared helpers ───────────────────────────────────────────────────────
+
 // Normalize phone for consistent storage and lookup (digits and + only)
 export function normalizePhone(phone: string): string {
   return phone.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
 }
+
+// ── Candidates table (legacy, used for some scripts) ─────────────────────
 
 export async function initDb() {
   // Create table if it doesn't exist
@@ -94,4 +98,77 @@ export async function findCandidate(params: {
 
   return null;
 }
+
+// ── Telegram message logging for dashboard ───────────────────────────────
+
+let messagesTableInitialized = false;
+
+async function ensureMessagesTable(): Promise<void> {
+  if (messagesTableInitialized) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS telegram_messages (
+      id SERIAL PRIMARY KEY,
+      chat_id BIGINT NOT NULL,
+      user_id BIGINT NOT NULL,
+      sender TEXT NOT NULL,
+      text TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+  messagesTableInitialized = true;
+}
+
+export async function logTelegramMessage(params: {
+  chatId: number;
+  userId: number;
+  sender: 'user' | 'bot';
+  text: string;
+}): Promise<void> {
+  try {
+    await ensureMessagesTable();
+    await pool.query(
+      `INSERT INTO telegram_messages (chat_id, user_id, sender, text)
+       VALUES ($1, $2, $3, $4)`,
+      [params.chatId, params.userId, params.sender, params.text],
+    );
+  } catch (e) {
+    console.warn('Failed to log Telegram message to Postgres:', e);
+  }
+}
+
+export async function getRecentChats(): Promise<
+  { chat_id: number; last_message_at: Date; last_text: string | null }[]
+> {
+  await ensureMessagesTable();
+  const result = await pool.query(
+    `
+    SELECT
+      chat_id,
+      MAX(created_at) AS last_message_at,
+      (ARRAY_AGG(text ORDER BY created_at DESC))[1] AS last_text
+    FROM telegram_messages
+    GROUP BY chat_id
+    ORDER BY last_message_at DESC
+    LIMIT 100
+    `,
+  );
+  return result.rows as any[];
+}
+
+export async function getChatMessages(chatId: number): Promise<
+  { sender: 'user' | 'bot'; text: string | null; created_at: Date }[]
+> {
+  await ensureMessagesTable();
+  const result = await pool.query(
+    `
+    SELECT sender, text, created_at
+    FROM telegram_messages
+    WHERE chat_id = $1
+    ORDER BY created_at ASC
+    `,
+    [chatId],
+  );
+  return result.rows as any[];
+}
+
 

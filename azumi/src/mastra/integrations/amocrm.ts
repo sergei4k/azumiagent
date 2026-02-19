@@ -7,7 +7,7 @@ import { getResumeSummary } from './resume-summary';
 
 const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN!;
 const AMOCRM_ACCESS_TOKEN = process.env.AMOCRM_ACCESS_TOKEN!;
-const AMOCRM_PIPELINE_ID = process.env.AMOCRM_QL_PIPELINE ? parseInt(process.env.AMOCRM_QL_PIPELINE) : undefined;
+const AMOCRM_PIPELINE_ID = process.env.AMOCRM_KZPIPELINE ? parseInt(process.env.AMOCRM_KZPIPELINE) : undefined;
 const AMOCRM_STATUS_ID = process.env.AMOCRM_STATUS_ID ? parseInt(process.env.AMOCRM_STATUS_ID) : undefined;
 /** Override drive URL for file uploads. If unset, fetched from GET /account?with=drive_url. */
 const AMOCRM_DRIVE_URL = process.env.AMOCRM_DRIVE_URL;
@@ -456,7 +456,13 @@ ${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'пр
 • Готов к переезду: ${data.willingToRelocate ? 'Да' : 'Нет'}
 ${data.preferredCountries?.length ? `• Предпочтительные страны: ${data.preferredCountries.join(', ')}` : ''}
 
+Прикрепленные файлы: 
+- Резюме: ${data.resumeFile?.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}
+- Видео-представление: ${data.introVideoFile?.fileUrl ? `\n  Google Drive: ${driveViewLink(data.introVideoFile.fileUrl)}` : ''}
+
 ${data.additionalNotes ? `\n📝 Дополнительная информация:\n${data.additionalNotes}` : ''}
+
+
 
 🤖 Источник: Telegram чат-бот`;
 
