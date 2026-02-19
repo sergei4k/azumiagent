@@ -1,0 +1,12 @@
+{
+  "name": "azumiagent",
+  "private": true,
+  "workspaces": ["azumi"],
+  "scripts": {
+    "build": "npm run build --workspace=azumi",
+    "start": "npm run start --workspace=azumi"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
