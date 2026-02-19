@@ -233,13 +233,14 @@ async function handleTextMessage(
 ): Promise<void> {
   const context = userContexts.get(userId);
 
-  // Pre-store files by phone BEFORE agent runs, so submit tool can find them.
-  // We learn phone either from this message (regex) or from a previous turn (stored later via extractPhoneFromResponse).
+  // Pre-store files by phone BEFORE agent runs, so submit/attach-files tools can find them.
+  // We learn phone from: this message (regex), or from previous turn (context.phoneNumber).
   if (context?.pendingFiles?.length) {
     const phoneFromMessage = extractPhoneFromMessage(text);
-    if (phoneFromMessage) {
-      console.log('Pre-storing %d pending file(s) by phone (from message) before agent runs', context.pendingFiles.length);
-      storeFilesByPhone(phoneFromMessage, userId);
+    const phoneToUse = phoneFromMessage ?? context.phoneNumber;
+    if (phoneToUse) {
+      console.log('Pre-storing %d pending file(s) by phone (from %s) before agent runs', context.pendingFiles.length, phoneFromMessage ? 'message' : 'context');
+      storeFilesByPhone(phoneToUse, userId);
     }
   }
 
@@ -316,6 +317,14 @@ async function handleTextMessage(
         responseText = "I've checked the requirements for you. Do you have any questions about them?";
       } else if (toolName === 'schedule-callback') {
         responseText = "I've scheduled a callback for you. A recruiter will contact you soon.";
+      } else if (toolName === 'attach-files-to-existing-lead') {
+        responseText = toolResult?.success
+          ? "I've attached your files to your application. Our team will review them soon."
+          : toolResult?.message || "I couldn't attach the files. Please try sending them again with your phone number.";
+      } else if (toolName === 'add-note-to-candidate-lead') {
+        responseText = toolResult?.success
+          ? "I've recorded that update in your application."
+          : "I couldn't save that update. Please try again.";
       } else {
         responseText = "I've processed that. Is there anything else you'd like to add, or shall we continue with your application?";
       }
@@ -333,10 +342,11 @@ async function handleTextMessage(
   const messageToSend = raw.replace(/\*\*([^*]+)\*\*/g, '$1').replace(/\*([^*]+)\*/g, '$1');
   await sendLongMessage(chatId, messageToSend);
 
-  // Check if agent learned a phone number and store files by phone
+  // Check if agent learned a phone number: store files by phone and remember for next turn
   const phoneNumber = extractPhoneFromResponse(response);
   if (phoneNumber) {
     storeFilesByPhone(phoneNumber, userId);
+    if (context) context.phoneNumber = phoneNumber;
   }
 
   console.log(`📤 Sent response to ${userFirstName} (${userId})`);

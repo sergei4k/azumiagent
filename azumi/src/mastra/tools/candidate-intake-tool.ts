@@ -1,6 +1,11 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
-import { createCandidateLead, searchCandidateInCRM } from '../integrations/amocrm';
+import {
+  createCandidateLead,
+  searchCandidateInCRM,
+  attachFilesToExistingLead,
+  addNoteToLead,
+} from '../integrations/amocrm';
 import { getFileUrl } from '../integrations/telegram-client';
 import { fileStoreByPhone } from '../integrations/shared-file-store';
 
@@ -195,7 +200,7 @@ export const submitCandidateApplicationTool = createTool({
     }
     
     const nextSteps = [
-      'Our recruitment team will review your application within 2-3 business days',,
+      'Our recruitment team will review your application within 2-3 business days',
     ];
     
     // Add reminders for missing documents
@@ -312,5 +317,107 @@ export const scheduleCallbackTool = createTool({
       message: `Callback scheduled for ${data.candidateName}`,
       confirmationDetails: `Our recruiter will call you at ${data.phone} during ${data.preferredTime} (${data.timezone}). ${confirmationMethod}`,
     };
+  },
+});
+
+/** Parse lead ID from applicationId (e.g. AZM-123 → 123) */
+function parseLeadIdFromApplicationId(applicationId: string): number | null {
+  const m = applicationId.match(/^AZM-(\d+)$/);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+// Tool to attach new files (resume, video) to an existing candidate lead
+export const attachFilesToExistingLeadTool = createTool({
+  id: 'attach-files-to-existing-lead',
+  description:
+    'Attach new or updated resume and/or introduction video to an existing candidate application. Use when a RETURNING candidate (found via lookup-candidate) sends new files after their initial application. The files must be stored via the file store (candidate sent them in chat). Do NOT use for new candidates - use submit-candidate-application instead.',
+  inputSchema: z.object({
+    applicationId: z.string().describe('Application ID from lookup-candidate (e.g. AZM-123)'),
+    phone: z.string().describe('Phone number used to store files in the file store'),
+    candidateName: z.string().describe('Full name of the candidate'),
+    noteText: z.string().optional().describe('Optional summary of what the candidate shared (e.g. "Updated resume with new certifications")'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    attached: z.array(z.string()),
+    message: z.string(),
+  }),
+  execute: async ({ applicationId, phone, candidateName, noteText }) => {
+    const leadId = parseLeadIdFromApplicationId(applicationId);
+    if (!leadId) {
+      return { success: false, attached: [], message: `Invalid application ID: ${applicationId}. Expected format AZM-123.` };
+    }
+
+    const normalizedPhone = normalizePhone(phone);
+    const storedFiles = fileStoreByPhone.get(normalizedPhone);
+    if (!storedFiles || (!storedFiles.resumeFile && !storedFiles.introVideoFile)) {
+      return {
+        success: false,
+        attached: [],
+        message:
+          'No files found for this phone number. Ask the candidate to send their resume or video directly in the chat, then try again.',
+      };
+    }
+
+    async function ensureFileUrl<T extends { fileId: string; fileUrl?: string }>(
+      file: T | undefined,
+      label: string
+    ): Promise<T | undefined> {
+      if (!file) return undefined;
+      if (file.fileUrl) return file;
+      try {
+        const url = await getFileUrl(file.fileId);
+        return { ...file, fileUrl: url };
+      } catch (e) {
+        console.warn(`Could not resolve ${label} fileUrl:`, e);
+        return file;
+      }
+    }
+
+    const resumeForAmo = await ensureFileUrl(storedFiles.resumeFile, 'resume');
+    const videoForAmo = await ensureFileUrl(storedFiles.introVideoFile, 'video');
+
+    const { attached } = await attachFilesToExistingLead(
+      leadId,
+      { resumeFile: resumeForAmo, introVideoFile: videoForAmo },
+      candidateName,
+      noteText
+    );
+
+    fileStoreByPhone.delete(normalizedPhone);
+
+    return {
+      success: true,
+      attached,
+      message: attached.length > 0
+        ? `Attached ${attached.join(', ')} to application ${applicationId}.`
+        : 'No files with valid URLs were attached.',
+    };
+  },
+});
+
+// Tool to add a note with new info to an existing candidate lead
+export const addNoteToCandidateLeadTool = createTool({
+  id: 'add-note-to-candidate-lead',
+  description:
+    'Add a note with new information to an existing candidate application. Use when a RETURNING candidate (found via lookup-candidate) provides updated info such as: new visa status, changed availability, new certifications, updated contact details, or any other update that should be recorded in their application.',
+  inputSchema: z.object({
+    applicationId: z.string().describe('Application ID from lookup-candidate (e.g. AZM-123)'),
+    noteText: z.string().describe('The new information to add (e.g. "Candidate now has UK Tier 5 visa valid until 2026")'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    message: z.string(),
+  }),
+  execute: async ({ applicationId, noteText }) => {
+    const leadId = parseLeadIdFromApplicationId(applicationId);
+    if (!leadId) {
+      return { success: false, message: `Invalid application ID: ${applicationId}. Expected format AZM-123.` };
+    }
+
+    const header = `📝 Обновление от кандидата\n📅 ${new Date().toLocaleString('ru-RU')}\n\n${noteText}\n\n🤖 Источник: Telegram чат-бот`;
+    await addNoteToLead(leadId, header);
+
+    return { success: true, message: `Note added to application ${applicationId}.` };
   },
 });

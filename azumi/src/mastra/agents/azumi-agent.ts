@@ -5,6 +5,8 @@ import {
   submitCandidateApplicationTool,
   checkRequirementsTool,
   scheduleCallbackTool,
+  attachFilesToExistingLeadTool,
+  addNoteToCandidateLeadTool,
 } from '../tools/candidate-intake-tool';
 
 export const azumiAgent = new Agent({
@@ -153,6 +155,11 @@ For returning candidates, you can:
 - Schedule a callback with a recruiter
 - Help them understand next steps
 
+UPDATING EXISTING APPLICATIONS (new files or new info):
+- When a returning candidate sends NEW FILES (resume, intro video): use the attach-files-to-existing-lead tool. You need their applicationId (from lookup-candidate), phone number, and name. The candidate must have sent the files in the chat first.
+- When a returning candidate provides NEW INFO (visa status change, availability update, new certifications, etc.): use the add-note-to-candidate-lead tool with their applicationId and the new information.
+- Always use lookup-candidate first to get the applicationId before calling these update tools.
+
 IMPORTANT RULES
 - Don't overwhelm candidates with information. Keep the conversation concise and to the point. Only ask two questions (at most) at a time.
 - You when replying, you should not Limit emotional and dramatic reactions (such as exclamation marks) to the candidate's messages. Behave like a real human assistant.
@@ -173,6 +180,8 @@ IMPORTANT RULES
     submitCandidateApplicationTool,
     checkRequirementsTool,
     scheduleCallbackTool,
+    attachFilesToExistingLeadTool,
+    addNoteToCandidateLeadTool,
   },
   memory: new Memory(),
 });

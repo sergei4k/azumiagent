@@ -580,6 +580,118 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
   };
 }
 
+/** File entry for attaching to existing leads */
+export type AttachFileEntry = {
+  fileId: string;
+  fileName?: string;
+  fileType?: string;
+  fileUrl?: string;
+  duration?: number;
+};
+
+/**
+ * Add a text note to an existing lead.
+ */
+export async function addNoteToLead(leadId: number, noteText: string): Promise<void> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    throw new Error('amoCRM not configured');
+  }
+  await amoRequest('/leads/notes', 'POST', [
+    {
+      entity_id: leadId,
+      note_type: 'common',
+      params: { text: noteText },
+    },
+  ]);
+}
+
+/**
+ * Attach new files (resume, intro video) to an existing lead and add a note.
+ * Use when a returning candidate sends updated documents or new files.
+ */
+export async function attachFilesToExistingLead(
+  leadId: number,
+  files: {
+    resumeFile?: AttachFileEntry;
+    introVideoFile?: AttachFileEntry;
+  },
+  candidateName: string,
+  noteText?: string
+): Promise<{ attached: string[] }> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    throw new Error('amoCRM not configured');
+  }
+
+  const attached: string[] = [];
+
+  const safeName = candidateName.replace(/\s+/g, '_').slice(0, 50);
+
+  async function uploadOne(
+    file: AttachFileEntry | undefined,
+    label: string,
+    defaultFileName: string
+  ): Promise<void> {
+    if (!file?.fileUrl) return;
+    const fileName = file.fileName || defaultFileName;
+    try {
+      await uploadFileToAmoCRM(file.fileUrl, fileName, 'leads', leadId);
+      attached.push(fileName);
+      const link = driveViewLink(file.fileUrl);
+      await addNoteToLead(
+        leadId,
+        `${label}: ${fileName}${link ? `\nGoogle Drive: ${link}` : ''}`
+      );
+    } catch (err) {
+      console.error(`Failed to upload ${label}:`, err);
+      const link = file.fileUrl;
+      await addNoteToLead(leadId, `${label} (ссылка):\n${link}`);
+      attached.push(fileName);
+    }
+  }
+
+  if (files.resumeFile?.fileUrl) {
+    let resumeSummary = '';
+    try {
+      resumeSummary = await getResumeSummary(
+        files.resumeFile.fileUrl,
+        files.resumeFile.fileType,
+        files.resumeFile.fileName
+      );
+    } catch {
+      /* ignore */
+    }
+    await uploadOne(
+      files.resumeFile,
+      '📄 Обновлённое резюме',
+      `resume_update_${safeName}.pdf`
+    );
+    if (resumeSummary) {
+      await addNoteToLead(leadId, `📄 Краткое содержание обновлённого резюме:\n${resumeSummary}`);
+    }
+  }
+
+  if (files.introVideoFile?.fileUrl) {
+    const dur = files.introVideoFile.duration
+      ? ` (${Math.floor(files.introVideoFile.duration / 60)}:${(files.introVideoFile.duration % 60).toString().padStart(2, '0')})`
+      : '';
+    await uploadOne(
+      files.introVideoFile,
+      `🎥 Видео-представление${dur}`,
+      `intro_video_${safeName}.mp4`
+    );
+  }
+
+  const header = `📝 Обновление заявки кандидата\n📅 ${new Date().toLocaleString('ru-RU')}\n`;
+  const body = noteText ? `\nНовая информация от кандидата:\n${noteText}\n` : '';
+  const filesList =
+    attached.length > 0
+      ? `\nПрикреплённые файлы: ${attached.join(', ')}`
+      : '';
+  await addNoteToLead(leadId, `${header}${body}${filesList}\n🤖 Источник: Telegram чат-бот`);
+
+  return { attached };
+}
+
 /**
  * Helper to fetch all pipelines and their statuses
  * Use this to find pipeline_id and status_id
