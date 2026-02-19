@@ -4,7 +4,7 @@
   "workspaces": ["azumi"],
   "scripts": {
     "build": "npm run build --workspace=azumi",
-    "start": "npm run start --workspace=azumi"
+    "start": "npm run telegram:prod --workspace=azumi"
   },
   "engines": {
     "node": ">=22.0.0"
