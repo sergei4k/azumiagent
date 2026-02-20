@@ -6,6 +6,7 @@ import {
   attachFilesToExistingLead,
   addNoteToLead,
 } from '../integrations/amocrm';
+import { initDb, saveCandidate } from '../../../db-pg';
 import { getFileUrl } from '../integrations/telegram-client';
 import { fileStoreByPhone } from '../integrations/shared-file-store';
 
@@ -162,8 +163,6 @@ export const submitCandidateApplicationTool = createTool({
       console.warn('📎 No files in fileStoreByPhone for phone %s – files may not reach amoCRM', normalizedPhone);
     }
     
-    // amoCRM is the single source of truth – no separate SQL save needed
-    
     console.log('📝 New Candidate Application Received:');
     console.log(JSON.stringify({ ...data, resumeFile: finalResumeFile, introVideoFile: finalIntroVideoFile }, null, 2));
 
@@ -197,6 +196,15 @@ export const submitCandidateApplicationTool = createTool({
     } catch (error) {
       console.error('❌ Failed to upload to amoCRM:', error);
       // Continue anyway - don't fail the application if CRM is down
+    }
+
+    // Store name + phone in Postgres (candidates table)
+    try {
+      await initDb();
+      await saveCandidate({ name: data.fullName, phone: data.phone });
+      console.log('✅ Candidate saved to Postgres');
+    } catch (error) {
+      console.warn('Could not save candidate to Postgres:', error);
     }
     
     const nextSteps = [

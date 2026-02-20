@@ -38,6 +38,7 @@
     "multer": "^2.0.2",
     "mysql2": "^3.16.3",
     "pdf-parse": "^2.4.5",
+    "pg": "^8.13.1",
     "tsx": "^4.19.0",
     "twilio": "^5.3.5",
     "zod": "^4.3.5"
@@ -46,6 +47,7 @@
     "@types/express": "^4.17.21",
     "@types/multer": "^2.0.0",
     "@types/node": "^25.2.0",
+    "@types/pg": "^8.16.0",
     "mastra": "^1.0.1",
     "typescript": "^5.9.3"
   }
