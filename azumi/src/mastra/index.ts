@@ -1,5 +1,6 @@
 import { Mastra } from '@mastra/core/mastra';
 import type { MastraCompositeStore } from '@mastra/core/storage';
+import { LibSQLStore } from '@mastra/libsql';
 import { PinoLogger } from '@mastra/loggers';
 import { PostgresStore } from '@mastra/pg';
 import { Observability, DefaultExporter, CloudExporter, SensitiveDataFilter } from '@mastra/observability';
@@ -12,10 +13,14 @@ export const mastra = new Mastra({
   workflows: { weatherWorkflow },
   agents: { weatherAgent, azumiAgent },
   scorers: { toolCallAppropriatenessScorer, completenessScorer, translationScorer },
-  storage: new PostgresStore({
-    id: 'mastra-storage',
-    connectionString: process.env.DATABASE_URL || process.env.POSTGRES_URL,
-  }) as unknown as MastraCompositeStore,
+  storage: (() => {
+    const conn = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (conn) {
+      return new PostgresStore({ id: 'mastra-storage', connectionString: conn }) as unknown as MastraCompositeStore;
+    }
+    console.warn('DATABASE_URL not set – using in-memory storage (conversation history will not persist across redeploys)');
+    return new LibSQLStore({ id: 'mastra-storage', url: ':memory:' }) as unknown as MastraCompositeStore;
+  })(),
   logger: new PinoLogger({
     name: 'Mastra',
     level: 'info',
