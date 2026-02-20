@@ -3,8 +3,6 @@
  * Creates leads and contacts in amoCRM from candidate applications
  */
 
-import { getResumeSummary } from './resume-summary';
-
 const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN!;
 const AMOCRM_ACCESS_TOKEN = process.env.AMOCRM_ACCESS_TOKEN!;
 const AMOCRM_PIPELINE_ID = process.env.AMOCRM_KZPIPELINE ? parseInt(process.env.AMOCRM_KZPIPELINE) : undefined;
@@ -143,13 +141,15 @@ async function uploadFileToDrive(
   while (offset < fileSize) {
     const end = Math.min(offset + maxPart, fileSize);
     const chunk = fileBytes.subarray(offset, end);
+    const part = Uint8Array.from(chunk);
     const partRes = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${AMOCRM_ACCESS_TOKEN}`,
         'Content-Type': 'application/octet-stream',
+        'Content-Length': String(part.byteLength),
       },
-      body: new Uint8Array(chunk),
+      body: part,
     });
     if (!partRes.ok) {
       const err = await partRes.text();
@@ -414,20 +414,6 @@ export async function createCandidateLead(data: CandidateData): Promise<{
   // Build lead name
   const leadName = `Кандидат: ${data.fullName}`;
 
-  // Generate resume summary from uploaded file (PDF/DOCX) for the note
-  let resumeSummary = '';
-  if (data.resumeFile?.fileUrl) {
-    try {
-      resumeSummary = await getResumeSummary(
-        data.resumeFile.fileUrl,
-        data.resumeFile.fileType,
-        data.resumeFile.fileName
-      );
-      if (resumeSummary) console.log('📄 Resume summary generated for amoCRM note');
-    } catch (e) {
-      console.warn('Resume summary skipped:', e);
-    }
-  }
 
   // Create comprehensive note with all candidate details
   const noteText = `📝 Заявка через чат-бот Azumi
@@ -444,7 +430,6 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 🛂 Виза:
 • Есть действующая виза: ${(data as any).hasValidVisa ? 'Да' : 'Нет'}
 ${(data as any).visaDetails ? `• Детали визы: ${(data as any).visaDetails}` : ''}
-${resumeSummary ? `\n📄 Краткое содержание резюме:\n${resumeSummary}\n` : ''}
 
 📋 Документы:
 ${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}${data.resumeFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}` : '• Резюме: не предоставлено'}
@@ -456,9 +441,6 @@ ${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'пр
 • Готов к переезду: ${data.willingToRelocate ? 'Да' : 'Нет'}
 ${data.preferredCountries?.length ? `• Предпочтительные страны: ${data.preferredCountries.join(', ')}` : ''}
 
-Прикрепленные файлы: 
-- Резюме: ${data.resumeFile?.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}
-- Видео-представление: ${data.introVideoFile?.fileUrl ? `\n  Google Drive: ${driveViewLink(data.introVideoFile.fileUrl)}` : ''}
 
 ${data.additionalNotes ? `\n📝 Дополнительная информация:\n${data.additionalNotes}` : ''}
 
@@ -650,24 +632,11 @@ export async function attachFilesToExistingLead(
   }
 
   if (files.resumeFile?.fileUrl) {
-    let resumeSummary = '';
-    try {
-      resumeSummary = await getResumeSummary(
-        files.resumeFile.fileUrl,
-        files.resumeFile.fileType,
-        files.resumeFile.fileName
-      );
-    } catch {
-      /* ignore */
-    }
     await uploadOne(
       files.resumeFile,
       '📄 Обновлённое резюме',
       `resume_update_${safeName}.pdf`
     );
-    if (resumeSummary) {
-      await addNoteToLead(leadId, `📄 Краткое содержание обновлённого резюме:\n${resumeSummary}`);
-    }
   }
 
   if (files.introVideoFile?.fileUrl) {
