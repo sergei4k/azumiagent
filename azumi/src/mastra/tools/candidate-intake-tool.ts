@@ -95,10 +95,7 @@ export const submitCandidateApplicationTool = createTool({
     currentLocation: z.string().describe('Current city and country of residence'),
     dateOfBirth: z.string().optional().describe('Date of birth (optional)'),
     
-    
-    // Qualifications
-    educationSummary: z.string().describe('Highest education level and relevant certifications'),
-    specializations: z.array(z.string()).optional().describe('Special skills like newborn care, special needs, tutoring subjects, music, sports'),
+  
     
     // Availability & Preferences
     availableFrom: z.string().describe('When candidate can start working'),
