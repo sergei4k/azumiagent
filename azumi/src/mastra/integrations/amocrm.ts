@@ -497,11 +497,11 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
 
   // Set pipeline and status based on candidate's current location
   const pipelineConfig = resolvePipeline(data.currentLocation);
-  if (pipelineConfig) {
-    leadData.pipeline_id = pipelineConfig.pipeline_id;
-    if (pipelineConfig.status_id) {
-      leadData.status_id = pipelineConfig.status_id;
-    }
+  const FALLBACK_PIPELINE: PipelineConfig = { pipeline_id: 9081022, status_id: 74242838 };
+  const pipeline = pipelineConfig ?? FALLBACK_PIPELINE;
+  leadData.pipeline_id = pipeline.pipeline_id;
+  if (pipeline.status_id) {
+    leadData.status_id = pipeline.status_id;
   }
 
   const leadResponse = await amoRequest('/leads', 'POST', [leadData]);
