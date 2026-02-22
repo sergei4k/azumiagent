@@ -31,7 +31,7 @@ const userContexts: Map<number, {
 import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
-import { logTelegramMessage } from '../../../db-pg';
+import { logTelegramMessage, upsertCandidateActivity, markApplicationComplete } from '../../../db-pg';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -157,6 +157,9 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
   } catch (e) {
     console.warn('Failed to log incoming Telegram message:', e);
   }
+
+  // Track activity for inactivity reminders
+  upsertCandidateActivity({ chatId, userId, firstName: userFirstName }).catch(() => {});
 
   try {
     // Show typing indicator
@@ -347,6 +350,18 @@ async function handleTextMessage(
   if (phoneNumber) {
     storeFilesByPhone(phoneNumber, userId);
     if (context) context.phoneNumber = phoneNumber;
+  }
+
+  // Mark application complete if submit tool succeeded (stops inactivity reminders)
+  if (response?.toolResults) {
+    for (const tr of response.toolResults) {
+      const name = (tr as any)?.payload?.toolName || (tr as any)?.toolName;
+      const result = (tr as any)?.payload?.result || (tr as any)?.result;
+      if (name === 'submit-candidate-application' && result?.success) {
+        markApplicationComplete(chatId).catch(() => {});
+        break;
+      }
+    }
   }
 
   console.log(`📤 Sent response to ${userFirstName} (${userId})`);

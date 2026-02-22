@@ -164,3 +164,107 @@ export async function getChatMessages(chatId: number): Promise<
     return [];
   }
 }
+
+// ── Candidate activity tracking (for inactivity reminders) ──────────────
+
+let activityTableInitialized = false;
+
+async function ensureActivityTable(): Promise<void> {
+  if (activityTableInitialized) return;
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS candidate_activity (
+      chat_id BIGINT NOT NULL,
+      user_id BIGINT NOT NULL,
+      first_name TEXT,
+      last_active_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      application_complete BOOLEAN NOT NULL DEFAULT FALSE,
+      reminders_sent INT NOT NULL DEFAULT 0,
+      last_reminder_at TIMESTAMPTZ,
+      opted_out BOOLEAN NOT NULL DEFAULT FALSE,
+      PRIMARY KEY (chat_id)
+    )
+  `);
+  activityTableInitialized = true;
+}
+
+export async function upsertCandidateActivity(params: {
+  chatId: number;
+  userId: number;
+  firstName?: string;
+}): Promise<void> {
+  try {
+    await ensureActivityTable();
+    await pool.query(
+      `INSERT INTO candidate_activity (chat_id, user_id, first_name, last_active_at)
+       VALUES ($1, $2, $3, NOW())
+       ON CONFLICT (chat_id)
+       DO UPDATE SET last_active_at = NOW(),
+                     user_id = EXCLUDED.user_id,
+                     first_name = COALESCE(EXCLUDED.first_name, candidate_activity.first_name)`,
+      [params.chatId, params.userId, params.firstName ?? null],
+    );
+  } catch (e) {
+    console.warn('Failed to upsert candidate activity:', e);
+  }
+}
+
+export async function markApplicationComplete(chatId: number): Promise<void> {
+  try {
+    await ensureActivityTable();
+    await pool.query(
+      `UPDATE candidate_activity SET application_complete = TRUE WHERE chat_id = $1`,
+      [chatId],
+    );
+  } catch (e) {
+    console.warn('Failed to mark application complete:', e);
+  }
+}
+
+export interface InactiveCandidate {
+  chat_id: number;
+  user_id: number;
+  first_name: string | null;
+  last_active_at: Date;
+  reminders_sent: number;
+}
+
+export async function getInactiveCandidates(params: {
+  inactiveForMs: number;
+  maxReminders: number;
+}): Promise<InactiveCandidate[]> {
+  try {
+    await ensureActivityTable();
+    const cutoff = new Date(Date.now() - params.inactiveForMs);
+    const result = await pool.query(
+      `SELECT chat_id, user_id, first_name, last_active_at, reminders_sent
+       FROM candidate_activity
+       WHERE application_complete = FALSE
+         AND opted_out = FALSE
+         AND reminders_sent < $1
+         AND last_active_at < $2
+         AND (last_reminder_at IS NULL OR last_reminder_at < last_active_at OR last_reminder_at < $2)
+       ORDER BY last_active_at ASC
+       LIMIT 50`,
+      [params.maxReminders, cutoff],
+    );
+    return result.rows as InactiveCandidate[];
+  } catch (e) {
+    console.warn('Failed to fetch inactive candidates:', e);
+    return [];
+  }
+}
+
+export async function recordReminderSent(chatId: number): Promise<void> {
+  try {
+    await ensureActivityTable();
+    await pool.query(
+      `UPDATE candidate_activity
+       SET reminders_sent = reminders_sent + 1,
+           last_reminder_at = NOW()
+       WHERE chat_id = $1`,
+      [chatId],
+    );
+  } catch (e) {
+    console.warn('Failed to record reminder sent:', e);
+  }
+}

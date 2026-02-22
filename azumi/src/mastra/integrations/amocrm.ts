@@ -5,8 +5,47 @@
 
 const AMOCRM_SUBDOMAIN = process.env.AMOCRM_SUBDOMAIN!;
 const AMOCRM_ACCESS_TOKEN = process.env.AMOCRM_ACCESS_TOKEN!;
-const AMOCRM_PIPELINE_ID = process.env.AMOCRM_KZPIPELINE ? parseInt(process.env.AMOCRM_KZPIPELINE) : undefined;
-const AMOCRM_STATUS_ID = process.env.AMOCRM_STATUS_ID ? parseInt(process.env.AMOCRM_STATUS_ID) : undefined;
+interface PipelineConfig {
+  pipeline_id: number;
+  status_id?: number;
+}
+
+const AMOCRM_PIPELINE_DEFAULT: PipelineConfig | undefined = (() => {
+  try {
+    return process.env.AMOCRM_PIPELINE_DEFAULT
+      ? JSON.parse(process.env.AMOCRM_PIPELINE_DEFAULT)
+      : undefined;
+  } catch {
+    console.warn('⚠️ AMOCRM_PIPELINE_DEFAULT is not valid JSON, ignoring');
+    return undefined;
+  }
+})();
+
+const AMOCRM_PIPELINE_MAP: Record<string, PipelineConfig> = (() => {
+  try {
+    return process.env.AMOCRM_PIPELINE_MAP
+      ? JSON.parse(process.env.AMOCRM_PIPELINE_MAP)
+      : {};
+  } catch {
+    console.warn('⚠️ AMOCRM_PIPELINE_MAP is not valid JSON, ignoring');
+    return {};
+  }
+})();
+
+function resolvePipeline(currentLocation?: string): PipelineConfig | undefined {
+  if (!currentLocation) return AMOCRM_PIPELINE_DEFAULT;
+
+  const loc = currentLocation.toLowerCase();
+  for (const [keyword, config] of Object.entries(AMOCRM_PIPELINE_MAP)) {
+    if (loc.includes(keyword.toLowerCase())) {
+      console.log(`📍 Matched location "${currentLocation}" → pipeline ${config.pipeline_id}, status ${config.status_id ?? 'default'} (keyword: "${keyword}")`);
+      return config;
+    }
+  }
+
+  console.log(`📍 No pipeline match for "${currentLocation}", using default: ${AMOCRM_PIPELINE_DEFAULT?.pipeline_id ?? 'none'}`);
+  return AMOCRM_PIPELINE_DEFAULT;
+}
 /** Override drive URL for file uploads. If unset, fetched from GET /account?with=drive_url. */
 const AMOCRM_DRIVE_URL = process.env.AMOCRM_DRIVE_URL;
 
@@ -456,14 +495,13 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
     },
   };
 
-  // Set pipeline if configured
-  if (AMOCRM_PIPELINE_ID) {
-    leadData.pipeline_id = AMOCRM_PIPELINE_ID;
-  }
-
-  // Set status if configured (status_id is specific to the pipeline)
-  if (AMOCRM_STATUS_ID) {
-    leadData.status_id = AMOCRM_STATUS_ID;
+  // Set pipeline and status based on candidate's current location
+  const pipelineConfig = resolvePipeline(data.currentLocation);
+  if (pipelineConfig) {
+    leadData.pipeline_id = pipelineConfig.pipeline_id;
+    if (pipelineConfig.status_id) {
+      leadData.status_id = pipelineConfig.status_id;
+    }
   }
 
   const leadResponse = await amoRequest('/leads', 'POST', [leadData]);
@@ -491,6 +529,7 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
         console.log('📤 Uploading resume to amoCRM: %s', fileName);
         await uploadFileToAmoCRM(data.resumeFile.fileUrl, fileName, 'leads', leadId);
       
+
       // Also add a note with the file reference
       await amoRequest('/leads/notes', 'POST', [
         {
@@ -678,7 +717,8 @@ export async function getPipelines() {
         console.log(`    - Status ID: ${status.id} | Name: ${status.name}`);
       });
     });
-    
+
+
     return pipelines;
   } catch (error) {
     console.error('Error fetching pipelines:', error);
