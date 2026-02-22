@@ -14,6 +14,7 @@ import { setWebhook, getWebhookInfo, deleteWebhook } from './telegram-client';
 import { createUploadRouter } from './file-upload-server';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
 import { startReminderScheduler } from './reminder-scheduler';
+import { getAdminDashboardHtml } from './admin-dashboard';
 
 const app = express();
 app.use(express.json());
@@ -30,7 +31,12 @@ app.get('/health', (req, res) => {
 // Web upload routes (for large files that exceed Telegram bot limits)
 app.use(createUploadRouter());
 
-// Simple JSON admin API for chat history
+// Admin dashboard UI
+app.get('/admin', (_req, res) => {
+  res.type('html').send(getAdminDashboardHtml());
+});
+
+// JSON admin API for chat history
 app.get('/admin/chats', async (_req, res) => {
   try {
     const chats = await getRecentChats();

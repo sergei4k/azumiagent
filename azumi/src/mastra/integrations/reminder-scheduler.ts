@@ -74,9 +74,12 @@ export function startReminderScheduler(): void {
     `inactive threshold ${INACTIVITY_THRESHOLD_MS / 3600000}h, max ${MAX_REMINDERS} reminders)`,
   );
 
-  sendReminders().catch((err) =>
-    console.error('Initial reminder check failed:', err),
-  );
+  // Delay initial check to let DB connections warm up
+  setTimeout(() => {
+    sendReminders().catch((err) =>
+      console.error('Initial reminder check failed:', err),
+    );
+  }, 30_000);
 
   intervalId = setInterval(() => {
     sendReminders().catch((err) =>

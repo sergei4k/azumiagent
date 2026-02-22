@@ -123,18 +123,22 @@ export async function logTelegramMessage(params: {
 }
 
 export async function getRecentChats(): Promise<
-  { chat_id: number; last_message_at: Date; last_text: string | null }[]
+  { chat_id: number; last_message_at: Date; last_text: string | null; first_name: string | null; message_count: number }[]
 > {
   try {
     await ensureMessagesTable();
+    await ensureActivityTable();
     const result = await pool.query(
       `
       SELECT
-        chat_id,
-        MAX(created_at) AS last_message_at,
-        (ARRAY_AGG(text ORDER BY created_at DESC))[1] AS last_text
-      FROM telegram_messages
-      GROUP BY chat_id
+        m.chat_id,
+        MAX(m.created_at) AS last_message_at,
+        (ARRAY_AGG(m.text ORDER BY m.created_at DESC))[1] AS last_text,
+        COUNT(*)::int AS message_count,
+        ca.first_name
+      FROM telegram_messages m
+      LEFT JOIN candidate_activity ca ON ca.chat_id = m.chat_id
+      GROUP BY m.chat_id, ca.first_name
       ORDER BY last_message_at DESC
       LIMIT 100
       `,
