@@ -2,9 +2,12 @@ import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 import {
   createCandidateLead,
+  createPreliminaryLead,
   searchCandidateInCRM,
   attachFilesToExistingLead,
   addNoteToLead,
+  findOpenLeadForContact,
+  updateLead,
 } from '../integrations/amocrm';
 import { initDb, saveCandidate } from '../../../db-pg';
 import { getFileUrl } from '../integrations/telegram-client';
@@ -79,6 +82,60 @@ export const lookupCandidateTool = createTool({
       candidate: undefined,
       message: 'No existing application found. This appears to be a new candidate.',
     };
+  },
+});
+
+// Tool to create an early/preliminary lead in the CRM as soon as a new candidate engages
+export const createPreliminaryLeadTool = createTool({
+  id: 'create-preliminary-lead',
+  description:
+    'Create a preliminary lead in the CRM for a NEW candidate as soon as they answer their first question (e.g. what position interests them). ' +
+    'This tracks candidates who start but may not finish their application. ' +
+    'Do NOT call this for returning candidates (found via lookup-candidate). ' +
+    'Do NOT call this if you have already called it for this candidate in this conversation.',
+  inputSchema: z.object({
+    name: z.string().describe('Candidate name (from Telegram first name or what they told you)'),
+    phone: z.string().optional().describe('Phone number if already provided'),
+    positionInterest: z.string().optional().describe('What position they are interested in (nanny, governess, tutor) if mentioned'),
+  }),
+  outputSchema: z.object({
+    success: z.boolean(),
+    leadId: z.number(),
+    message: z.string(),
+  }),
+  execute: async ({ name, phone, positionInterest }) => {
+    try {
+      if (phone) {
+        const existing = await searchCandidateInCRM({ phone });
+        if (existing.found) {
+          return {
+            success: true,
+            leadId: existing.leads[0]?.id ?? 0,
+            message: `Candidate already exists in CRM (contact found for ${phone}). Skipping preliminary lead creation.`,
+          };
+        }
+      }
+
+      const result = await createPreliminaryLead({
+        name,
+        phone,
+        positionInterest,
+        source: 'Telegram чат-бот',
+      });
+
+      return {
+        success: true,
+        leadId: result.leadId,
+        message: `Preliminary lead created (ID: ${result.leadId}). Continue collecting application details.`,
+      };
+    } catch (error) {
+      console.error('Failed to create preliminary lead:', error);
+      return {
+        success: false,
+        leadId: 0,
+        message: 'Could not create preliminary lead, but continue with the application.',
+      };
+    }
   },
 });
 
@@ -179,20 +236,44 @@ export const submitCandidateApplicationTool = createTool({
     const resumeForAmo = await ensureFileUrl(finalResumeFile, 'resume');
     const videoForAmo = await ensureFileUrl(finalIntroVideoFile, 'video');
 
+    // Check if a preliminary lead already exists for this candidate
+    let existingLeadId: number | null = null;
+    try {
+      existingLeadId = await findOpenLeadForContact(data.phone);
+      if (existingLeadId) {
+        console.log(`📝 Found existing preliminary lead ${existingLeadId}, will upgrade it`);
+      }
+    } catch {
+      // Ignore — will create a new lead
+    }
+
     // Upload to amoCRM with files
     let amoResult;
     try {
-      amoResult = await createCandidateLead({
-        ...data,
-        applicationId,
-        preferredContactMethod: 'phone',
-        resumeFile: resumeForAmo,
-        introVideoFile: videoForAmo,
-      });
-      console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
+      if (existingLeadId) {
+        // Upgrade the preliminary lead: update name, status, and add full details as note
+        await updateLead(existingLeadId, {
+          name: `Кандидат: ${data.fullName}`,
+          status_id: 74242838,
+        });
+        amoResult = {
+          contactId: 0,
+          leadId: existingLeadId,
+          leadUrl: `https://infoazumistaffru.amocrm.ru/leads/detail/${existingLeadId}`,
+        };
+        console.log('✅ Upgraded preliminary lead to full application:', amoResult.leadUrl);
+      } else {
+        amoResult = await createCandidateLead({
+          ...data,
+          applicationId,
+          preferredContactMethod: 'phone',
+          resumeFile: resumeForAmo,
+          introVideoFile: videoForAmo,
+        });
+        console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
+      }
     } catch (error) {
       console.error('❌ Failed to upload to amoCRM:', error);
-      // Continue anyway - don't fail the application if CRM is down
     }
 
     // Store name + phone in Postgres (candidates table)

@@ -185,9 +185,13 @@ async function ensureActivityTable(): Promise<void> {
       reminders_sent INT NOT NULL DEFAULT 0,
       last_reminder_at TIMESTAMPTZ,
       opted_out BOOLEAN NOT NULL DEFAULT FALSE,
+      lead_id INT,
       PRIMARY KEY (chat_id)
     )
   `);
+  try {
+    await pool.query(`ALTER TABLE candidate_activity ADD COLUMN IF NOT EXISTS lead_id INT`);
+  } catch { /* column may already exist */ }
   activityTableInitialized = true;
 }
 
@@ -270,5 +274,30 @@ export async function recordReminderSent(chatId: number): Promise<void> {
     );
   } catch (e) {
     console.warn('Failed to record reminder sent:', e);
+  }
+}
+
+export async function setLeadIdForChat(chatId: number, leadId: number): Promise<void> {
+  try {
+    await ensureActivityTable();
+    await pool.query(
+      `UPDATE candidate_activity SET lead_id = $2 WHERE chat_id = $1`,
+      [chatId, leadId],
+    );
+  } catch (e) {
+    console.warn('Failed to set lead_id for chat:', e);
+  }
+}
+
+export async function getLeadIdForChat(chatId: number): Promise<number | null> {
+  try {
+    await ensureActivityTable();
+    const result = await pool.query(
+      `SELECT lead_id FROM candidate_activity WHERE chat_id = $1`,
+      [chatId],
+    );
+    return result.rows[0]?.lead_id ?? null;
+  } catch {
+    return null;
   }
 }

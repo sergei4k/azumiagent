@@ -601,6 +601,121 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
   };
 }
 
+/**
+ * Create a preliminary lead in amoCRM early in the conversation,
+ * before the full application is collected. This allows tracking
+ * candidates who start but don't finish their application.
+ */
+export async function createPreliminaryLead(data: {
+  name: string;
+  phone?: string;
+  positionInterest?: string;
+  source: string;
+}): Promise<{ contactId: number; leadId: number; leadUrl: string }> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    throw new Error('amoCRM not configured');
+  }
+
+  let contactId: number;
+
+  if (data.phone) {
+    const existing = await findExistingContact(data.phone);
+    if (existing) {
+      contactId = existing;
+      console.log(`📝 Found existing contact ${contactId} for preliminary lead`);
+    } else {
+      const contactRes = await amoRequest('/contacts', 'POST', [
+        {
+          name: data.name,
+          custom_fields_values: [
+            { field_code: 'PHONE', values: [{ value: data.phone, enum_code: 'WORK' }] },
+          ],
+        },
+      ]);
+      contactId = contactRes._embedded.contacts[0].id;
+    }
+  } else {
+    const contactRes = await amoRequest('/contacts', 'POST', [
+      { name: data.name },
+    ]);
+    contactId = contactRes._embedded.contacts[0].id;
+  }
+
+  const PRELIMINARY_PIPELINE: PipelineConfig = { pipeline_id: 9081022, status_id: 73728086 };
+  const pipeline = AMOCRM_PIPELINE_DEFAULT
+    ? { pipeline_id: AMOCRM_PIPELINE_DEFAULT.pipeline_id, status_id: 73728086 }
+    : PRELIMINARY_PIPELINE;
+
+  const leadData: any = {
+    name: `Кандидат (предварительный): ${data.name}`,
+    _embedded: { contacts: [{ id: contactId }] },
+    pipeline_id: pipeline.pipeline_id,
+    status_id: pipeline.status_id,
+  };
+
+  const leadRes = await amoRequest('/leads', 'POST', [leadData]);
+  const leadId = leadRes._embedded.leads[0].id;
+
+  const noteText = `📝 Предварительная заявка (чат-бот)
+📅 ${new Date().toLocaleString('ru-RU')}
+
+👤 Имя: ${data.name}
+${data.phone ? `📞 Телефон: ${data.phone}` : '📞 Телефон: еще не указан'}
+${data.positionInterest ? `💼 Интерес: ${data.positionInterest}` : ''}
+
+📌 Статус: кандидат начал заполнение заявки, но еще не завершил
+🤖 Источник: ${data.source}`;
+
+  await amoRequest('/leads/notes', 'POST', [
+    { entity_id: leadId, note_type: 'common', params: { text: noteText } },
+  ]);
+
+  console.log(`✅ Created preliminary lead ${leadId} for ${data.name}`);
+
+  return {
+    contactId,
+    leadId,
+    leadUrl: `https://${AMOCRM_SUBDOMAIN}.amocrm.ru/leads/detail/${leadId}`,
+  };
+}
+
+/**
+ * Update an existing lead's status and name in amoCRM.
+ */
+export async function updateLead(leadId: number, updates: {
+  name?: string;
+  status_id?: number;
+  pipeline_id?: number;
+}): Promise<void> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    throw new Error('amoCRM not configured');
+  }
+  await amoRequest('/leads', 'PATCH', [{ id: leadId, ...updates }]);
+}
+
+/**
+ * Find an existing lead for a contact (to detect preliminary leads).
+ * Returns the most recent open lead ID if one exists.
+ */
+export async function findOpenLeadForContact(phone: string): Promise<number | null> {
+  try {
+    const contactId = await findExistingContact(phone);
+    if (!contactId) return null;
+
+    const res = await amoRequest(
+      `/contacts/${contactId}/leads`,
+      'GET',
+    );
+    const leads = res?._embedded?.leads;
+    if (!leads?.length) return null;
+
+    const openLead = leads.find((l: any) => !l.closed_at);
+    return openLead?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** File entry for attaching to existing leads */
 export type AttachFileEntry = {
   fileId: string;

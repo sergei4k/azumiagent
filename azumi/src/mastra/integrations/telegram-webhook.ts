@@ -31,7 +31,8 @@ const userContexts: Map<number, {
 import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
-import { logTelegramMessage, upsertCandidateActivity, markApplicationComplete } from '../../../db-pg';
+import { logTelegramMessage, upsertCandidateActivity, markApplicationComplete, setLeadIdForChat, getLeadIdForChat } from '../../../db-pg';
+import { addNoteToLead } from './amocrm';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -352,19 +353,54 @@ async function handleTextMessage(
     if (context) context.phoneNumber = phoneNumber;
   }
 
-  // Mark application complete if submit tool succeeded (stops inactivity reminders)
+  // Extract lead IDs from tool results and mark completion
   if (response?.toolResults) {
     for (const tr of response.toolResults) {
       const name = (tr as any)?.payload?.toolName || (tr as any)?.toolName;
       const result = (tr as any)?.payload?.result || (tr as any)?.result;
+
+      if (name === 'create-preliminary-lead' && result?.success && result?.leadId) {
+        setLeadIdForChat(chatId, result.leadId).catch(() => {});
+      }
       if (name === 'submit-candidate-application' && result?.success) {
         markApplicationComplete(chatId).catch(() => {});
-        break;
+      }
+      if (name === 'lookup-candidate' && result?.found && result?.candidate?.applicationId) {
+        const m = result.candidate.applicationId.match(/^AZM-(\d+)$/);
+        if (m) setLeadIdForChat(chatId, parseInt(m[1], 10)).catch(() => {});
       }
     }
   }
 
+  // Log conversation to amoCRM lead in real-time
+  logMessagesToCRM(chatId, text, messageToSend).catch((err) =>
+    console.warn('CRM message log failed:', err),
+  );
+
   console.log(`📤 Sent response to ${userFirstName} (${userId})`);
+}
+
+/**
+ * Log a user+bot message exchange to the candidate's amoCRM lead as a note.
+ */
+async function logMessagesToCRM(chatId: number, userText: string, botText: string): Promise<void> {
+  const leadId = await getLeadIdForChat(chatId);
+  if (!leadId) return;
+
+  const timestamp = new Date().toLocaleString('ru-RU');
+  const note = `💬 Telegram (${timestamp})
+
+👤 Кандидат:
+${userText}
+
+🤖 Бот:
+${botText}`;
+
+  try {
+    await addNoteToLead(leadId, note);
+  } catch (err) {
+    console.warn(`Failed to log messages to CRM lead ${leadId}:`, err);
+  }
 }
 
 /**
