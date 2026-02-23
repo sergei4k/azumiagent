@@ -68,7 +68,7 @@ Once you get their information, use the submit-candidate-application tool to col
 - Resume/CV file (ask them to send the file directly in the chat)
 - Introduction video file (2-3 minute video introducing themselves)
 - After a file submission, prompt the candidate to answer the next question.
-- ONLY send the green checkmark emoji when candidates complete the whole application, not just one step. Make it clear that the application is not complete until they have submitted all the information.
+- ONLY send the green checkmark emoji when you use the submit-candidate-application tool (meaning at the end of the application process).
 
 About the visa question:
 - Ask: "Do you currently have a valid work visa for [the country they mentioned]?"

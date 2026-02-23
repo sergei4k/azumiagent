@@ -354,26 +354,44 @@ async function handleTextMessage(
   }
 
   // Extract lead IDs from tool results and mark completion
-  if (response?.toolResults) {
-    for (const tr of response.toolResults) {
-      const name = (tr as any)?.payload?.toolName || (tr as any)?.toolName;
-      const result = (tr as any)?.payload?.result || (tr as any)?.result;
+  let detectedLeadId: number | null = null;
 
-      if (name === 'create-preliminary-lead' && result?.success && result?.leadId) {
-        setLeadIdForChat(chatId, result.leadId).catch(() => {});
+  const allToolResults = response?.toolResults ?? [];
+  // Also check inside steps for tool results (Mastra may nest them)
+  if (response?.steps?.length) {
+    for (const step of response.steps as any[]) {
+      if (step?.toolResults?.length) {
+        allToolResults.push(...step.toolResults);
       }
-      if (name === 'submit-candidate-application' && result?.success) {
-        markApplicationComplete(chatId).catch(() => {});
-      }
-      if (name === 'lookup-candidate' && result?.found && result?.candidate?.applicationId) {
-        const m = result.candidate.applicationId.match(/^AZM-(\d+)$/);
-        if (m) setLeadIdForChat(chatId, parseInt(m[1], 10)).catch(() => {});
+    }
+  }
+
+  for (const tr of allToolResults) {
+    const name = (tr as any)?.toolName || (tr as any)?.payload?.toolName;
+    const result = (tr as any)?.result || (tr as any)?.payload?.result;
+
+    console.log(`🔧 Tool result: name=${name}, keys=${result ? Object.keys(result).join(',') : 'null'}`);
+
+    if (name === 'create-preliminary-lead' && result?.success && result?.leadId) {
+      detectedLeadId = result.leadId;
+      await setLeadIdForChat(chatId, result.leadId);
+      console.log(`📌 Linked chat ${chatId} → CRM lead ${result.leadId}`);
+    }
+    if (name === 'submit-candidate-application' && result?.success) {
+      markApplicationComplete(chatId).catch(() => {});
+    }
+    if (name === 'lookup-candidate' && result?.found && result?.candidate?.applicationId) {
+      const m = result.candidate.applicationId.match(/^AZM-(\d+)$/);
+      if (m) {
+        detectedLeadId = parseInt(m[1], 10);
+        await setLeadIdForChat(chatId, detectedLeadId);
+        console.log(`📌 Linked returning candidate chat ${chatId} → CRM lead ${detectedLeadId}`);
       }
     }
   }
 
   // Log conversation to amoCRM lead in real-time
-  logMessagesToCRM(chatId, text, messageToSend).catch((err) =>
+  logMessagesToCRM(chatId, text, messageToSend, detectedLeadId).catch((err) =>
     console.warn('CRM message log failed:', err),
   );
 
@@ -382,9 +400,10 @@ async function handleTextMessage(
 
 /**
  * Log a user+bot message exchange to the candidate's amoCRM lead as a note.
+ * @param knownLeadId - pass directly when just extracted from tool results to avoid race conditions
  */
-async function logMessagesToCRM(chatId: number, userText: string, botText: string): Promise<void> {
-  const leadId = await getLeadIdForChat(chatId);
+async function logMessagesToCRM(chatId: number, userText: string, botText: string, knownLeadId?: number | null): Promise<void> {
+  const leadId = knownLeadId ?? (await getLeadIdForChat(chatId));
   if (!leadId) return;
 
   const timestamp = new Date().toLocaleString('ru-RU');
@@ -398,6 +417,7 @@ ${botText}`;
 
   try {
     await addNoteToLead(leadId, note);
+    console.log(`💬 Logged conversation to CRM lead ${leadId}`);
   } catch (err) {
     console.warn(`Failed to log messages to CRM lead ${leadId}:`, err);
   }
