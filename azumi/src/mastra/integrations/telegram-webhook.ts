@@ -356,22 +356,46 @@ async function handleTextMessage(
   // Extract lead IDs from tool results and mark completion
   let detectedLeadId: number | null = null;
 
-  const allToolResults = response?.toolResults ?? [];
-  // Also check inside steps for tool results (Mastra may nest them)
-  if (response?.steps?.length) {
+  // Collect tool results from every possible location in the response
+  const allToolResults: { name: string; result: any }[] = [];
+
+  function extractFromArray(arr: any[]) {
+    for (const tr of arr) {
+      const name = tr?.toolName || tr?.payload?.toolName || '';
+      const result = tr?.result || tr?.payload?.result;
+      if (name) allToolResults.push({ name, result });
+    }
+  }
+
+  if (Array.isArray(response?.toolResults)) {
+    extractFromArray(response.toolResults);
+  }
+  if (Array.isArray(response?.steps)) {
     for (const step of response.steps as any[]) {
-      if (step?.toolResults?.length) {
-        allToolResults.push(...step.toolResults);
+      if (Array.isArray(step?.toolResults)) extractFromArray(step.toolResults);
+      if (Array.isArray(step?.toolCalls)) {
+        for (const tc of step.toolCalls) {
+          const name = tc?.toolName || '';
+          const result = tc?.result;
+          if (name && result) allToolResults.push({ name, result });
+        }
       }
     }
   }
 
-  for (const tr of allToolResults) {
-    const name = (tr as any)?.toolName || (tr as any)?.payload?.toolName;
-    const result = (tr as any)?.result || (tr as any)?.payload?.result;
+  // Debug: log what we found
+  console.log(`🔧 Extracted ${allToolResults.length} tool result(s): ${allToolResults.map(t => t.name).join(', ') || 'none'}`);
+  if (allToolResults.length === 0) {
+    // Deep debug: show what keys exist on the response
+    const keys = response ? Object.keys(response).filter(k => !['text', 'rawResponse'].includes(k)) : [];
+    console.log(`🔧 Response keys: ${keys.join(', ')}`);
+    if (response?.steps?.length) {
+      const stepKeys = Object.keys(response.steps[0] || {});
+      console.log(`🔧 Step[0] keys: ${stepKeys.join(', ')}`);
+    }
+  }
 
-    console.log(`🔧 Tool result: name=${name}, keys=${result ? Object.keys(result).join(',') : 'null'}`);
-
+  for (const { name, result } of allToolResults) {
     if (name === 'create-preliminary-lead' && result?.success && result?.leadId) {
       detectedLeadId = result.leadId;
       await setLeadIdForChat(chatId, result.leadId);
