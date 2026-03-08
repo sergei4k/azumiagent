@@ -396,13 +396,16 @@ async function handleTextMessage(
   }
 
   for (const { name, result } of allToolResults) {
-    if (name === 'create-preliminary-lead' && result?.success && result?.leadId) {
-      detectedLeadId = result.leadId;
-      await setLeadIdForChat(chatId, result.leadId);
-      console.log(`📌 Linked chat ${chatId} → CRM lead ${result.leadId}`);
-    }
     if (name === 'submit-candidate-application' && result?.success) {
       markApplicationComplete(chatId).catch(() => {});
+      if (result?.applicationId) {
+        const m = result.applicationId.match(/^AZM-(\d+)$/);
+        if (m) {
+          detectedLeadId = parseInt(m[1], 10);
+          await setLeadIdForChat(chatId, detectedLeadId);
+          console.log(`📌 Linked chat ${chatId} → CRM lead ${detectedLeadId}`);
+        }
+      }
     }
     if (name === 'lookup-candidate' && result?.found && result?.candidate?.applicationId) {
       const m = result.candidate.applicationId.match(/^AZM-(\d+)$/);

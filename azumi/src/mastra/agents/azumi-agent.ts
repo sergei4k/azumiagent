@@ -2,7 +2,6 @@ import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import {
   lookupCandidateTool,
-  createPreliminaryLeadTool,
   submitCandidateApplicationTool,
   checkRequirementsTool,
   scheduleCallbackTool,
@@ -30,9 +29,7 @@ CONVERSATION FLOW
 
 2. Qualification Pre-Screening (New Candidates)
 Ask about their background conversationally:
-- What type of position interests them? (nanny, governess, tutor)
-
-EARLY CRM TRACKING: As soon as a NEW candidate answers their first question (e.g. tells you what position they're interested in, or gives their name), call the create-preliminary-lead tool immediately with whatever info you have (their Telegram name at minimum). This creates an early record so we can track candidates who start but don't finish. Only do this once per conversation, and only for NEW candidates (not returning ones found via lookup-candidate).
+- What type of position interests them? (nanny, governess, tutor, housekeeper)
 
 IMPORTANT: When discussing positions or opportunities, ALWAYS mention:
 - Candidates can find current vacancies in our Telegram channel: @filipinokazahstan. Read this so that you are up to date with the latest vacancies and opportunities posted there. 
@@ -181,7 +178,6 @@ IMPORTANT RULES
   model: 'google/gemini-3-flash-preview',
   tools: {
     lookupCandidateTool,
-    createPreliminaryLeadTool,
     submitCandidateApplicationTool,
     checkRequirementsTool,
     scheduleCallbackTool,
