@@ -13,7 +13,7 @@ import { handleTelegramWebhook } from './telegram-webhook';
 import { setWebhook, getWebhookInfo, deleteWebhook } from './telegram-client';
 import { createUploadRouter } from './file-upload-server';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
-import { startReminderScheduler } from './reminder-scheduler';
+
 import { getAdminDashboardHtml } from './admin-dashboard';
 
 const app = express();
@@ -131,7 +131,7 @@ async function startServer(port: number, attempt: number): Promise<void> {
     console.log(`\nTo set up webhook, POST to /telegram/setup-webhook with:`);
     console.log(`  { "webhookUrl": "https://your-domain.com" }`);
 
-    startReminderScheduler();
+
   });
 
   server.on('error', (err: NodeJS.ErrnoException) => {

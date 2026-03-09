@@ -31,8 +31,7 @@ const userContexts: Map<number, {
 import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
-import { logTelegramMessage, upsertCandidateActivity, markApplicationComplete, setLeadIdForChat, getLeadIdForChat } from '../../../db-pg';
-import { addNoteToLead } from './amocrm';
+import { logTelegramMessage } from '../../../db-pg';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -158,9 +157,6 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
   } catch (e) {
     console.warn('Failed to log incoming Telegram message:', e);
   }
-
-  // Track activity for inactivity reminders
-  upsertCandidateActivity({ chatId, userId, firstName: userFirstName }).catch(() => {});
 
   try {
     // Show typing indicator
@@ -353,101 +349,10 @@ async function handleTextMessage(
     if (context) context.phoneNumber = phoneNumber;
   }
 
-  // Extract lead IDs from tool results and mark completion
-  let detectedLeadId: number | null = null;
-
-  // Collect tool results from every possible location in the response
-  const allToolResults: { name: string; result: any }[] = [];
-
-  function extractFromArray(arr: any[]) {
-    for (const tr of arr) {
-      const name = tr?.toolName || tr?.payload?.toolName || '';
-      const result = tr?.result || tr?.payload?.result;
-      if (name) allToolResults.push({ name, result });
-    }
-  }
-
-  if (Array.isArray(response?.toolResults)) {
-    extractFromArray(response.toolResults);
-  }
-  if (Array.isArray(response?.steps)) {
-    for (const step of response.steps as any[]) {
-      if (Array.isArray(step?.toolResults)) extractFromArray(step.toolResults);
-      if (Array.isArray(step?.toolCalls)) {
-        for (const tc of step.toolCalls) {
-          const name = tc?.toolName || '';
-          const result = tc?.result;
-          if (name && result) allToolResults.push({ name, result });
-        }
-      }
-    }
-  }
-
-  // Debug: log what we found
-  console.log(`🔧 Extracted ${allToolResults.length} tool result(s): ${allToolResults.map(t => t.name).join(', ') || 'none'}`);
-  if (allToolResults.length === 0) {
-    // Deep debug: show what keys exist on the response
-    const keys = response ? Object.keys(response).filter(k => !['text', 'rawResponse'].includes(k)) : [];
-    console.log(`🔧 Response keys: ${keys.join(', ')}`);
-    if (response?.steps?.length) {
-      const stepKeys = Object.keys(response.steps[0] || {});
-      console.log(`🔧 Step[0] keys: ${stepKeys.join(', ')}`);
-    }
-  }
-
-  for (const { name, result } of allToolResults) {
-    if (name === 'submit-candidate-application' && result?.success) {
-      markApplicationComplete(chatId).catch(() => {});
-      if (result?.applicationId) {
-        const m = result.applicationId.match(/^AZM-(\d+)$/);
-        if (m) {
-          detectedLeadId = parseInt(m[1], 10);
-          await setLeadIdForChat(chatId, detectedLeadId);
-          console.log(`📌 Linked chat ${chatId} → CRM lead ${detectedLeadId}`);
-        }
-      }
-    }
-    if (name === 'lookup-candidate' && result?.found && result?.candidate?.applicationId) {
-      const m = result.candidate.applicationId.match(/^AZM-(\d+)$/);
-      if (m) {
-        detectedLeadId = parseInt(m[1], 10);
-        await setLeadIdForChat(chatId, detectedLeadId);
-        console.log(`📌 Linked returning candidate chat ${chatId} → CRM lead ${detectedLeadId}`);
-      }
-    }
-  }
-
-  // Log conversation to amoCRM lead in real-time
-  logMessagesToCRM(chatId, text, messageToSend, detectedLeadId).catch((err) =>
-    console.warn('CRM message log failed:', err),
-  );
+  // Log bot reply to Postgres so the admin dashboard shows both sides
+  logTelegramMessage({ chatId, userId, sender: 'bot', text: messageToSend }).catch(() => {});
 
   console.log(`📤 Sent response to ${userFirstName} (${userId})`);
-}
-
-/**
- * Log a user+bot message exchange to the candidate's amoCRM lead as a note.
- * @param knownLeadId - pass directly when just extracted from tool results to avoid race conditions
- */
-async function logMessagesToCRM(chatId: number, userText: string, botText: string, knownLeadId?: number | null): Promise<void> {
-  const leadId = knownLeadId ?? (await getLeadIdForChat(chatId));
-  if (!leadId) return;
-
-  const timestamp = new Date().toLocaleString('ru-RU');
-  const note = `💬 Telegram (${timestamp})
-
-👤 Кандидат:
-${userText}
-
-🤖 Бот:
-${botText}`;
-
-  try {
-    await addNoteToLead(leadId, note);
-    console.log(`💬 Logged conversation to CRM lead ${leadId}`);
-  } catch (err) {
-    console.warn(`Failed to log messages to CRM lead ${leadId}:`, err);
-  }
 }
 
 /**
