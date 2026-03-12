@@ -1,12 +1,17 @@
 {
   "name": "azumiagent",
   "private": true,
-  "workspaces": ["azumi"],
+  "workspaces": [
+    "azumi"
+  ],
   "scripts": {
     "build": "npm run build --workspace=azumi",
     "start": "npm run telegram:prod --workspace=azumi"
   },
   "engines": {
     "node": ">=22.0.0"
+  },
+  "dependencies": {
+    "baileys": "^7.0.0-rc.9"
   }
 }

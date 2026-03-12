@@ -190,12 +190,12 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
     const fileInfo = extractFileFromMessage(message);
     if (fileInfo) {
       await handleFileUpload(chatId, userId, message, fileInfo);
-      // If there was a caption, also let the agent process it
-      if (message.caption?.trim()) {
-        const fileLabel = fileInfo.type === 'video' ? 'intro video' : fileInfo.type === 'document' ? 'resume' : 'file';
-        const captionPrompt = `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}.] They also wrote: ${message.caption.trim()}`;
-        await handleTextMessage(chatId, userId, captionPrompt, userFirstName);
-      }
+      // Notify the agent so its memory knows the file was received
+      const fileLabel = fileInfo.type === 'video' ? 'intro video' : fileInfo.type === 'document' ? 'resume/CV' : 'file';
+      const fileNotice = message.caption?.trim()
+        ? `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully.] They also wrote: ${message.caption.trim()}`
+        : `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully. Do NOT ask for this file again.]`;
+      await handleTextMessage(chatId, userId, fileNotice, userFirstName);
       return;
     }
 
