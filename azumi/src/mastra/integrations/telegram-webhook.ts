@@ -433,9 +433,8 @@ async function handleFileUpload(
     if (driveResult) fileUrl = driveResult.downloadUrl;
   }
 
-  // Determine if this is a resume or video
+  // Store the file — the agent will acknowledge receipt via handleTextMessage
   if (fileInfo.type === 'video' || fileInfo.fileType?.startsWith('video/')) {
-    // It's a video - likely intro video
     context.pendingFiles.push({
       type: 'video',
       fileId: fileInfo.fileId,
@@ -444,16 +443,6 @@ async function handleFileUpload(
       fileUrl,
       duration: fileInfo.duration,
     });
-
-    const durationInfo = fileInfo.duration 
-      ? ` (${Math.floor(fileInfo.duration / 60)}:${(fileInfo.duration % 60).toString().padStart(2, '0')})`
-      : '';
-
-    await sendTelegramMessage(
-      chatId,
-      `✅ Thank you! I've received your introduction video${durationInfo}. This will help families get to know you better!\n\nIs there anything else you'd like to add or shall we continue?`
-    );
-
   } else if (
     fileInfo.type === 'document' ||
     fileInfo.fileType?.includes('pdf') ||
@@ -461,7 +450,6 @@ async function handleFileUpload(
     fileInfo.fileType?.includes('document') ||
     fileInfo.fileName?.match(/\.(pdf|doc|docx|rtf)$/i)
   ) {
-    // It's likely a resume/CV
     context.pendingFiles.push({
       type: 'resume',
       fileId: fileInfo.fileId,
@@ -469,25 +457,6 @@ async function handleFileUpload(
       fileType: fileInfo.fileType,
       fileUrl,
     });
-
-    await sendTelegramMessage(
-      chatId,
-      `✅ Thank you! I've received your resume${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}.\n\nIs there anything else you'd like to share, or shall we continue with your application?`
-    );
-
-  } else if (fileInfo.type === 'photo') {
-    // Photo - could be document photo or profile photo
-    await sendTelegramMessage(
-      chatId,
-      `I received your photo. If this is a document (like a certificate), please send it as a file for better quality. If you meant to send your resume or video, please send those as well.`
-    );
-
-  } else {
-    // Unknown file type
-    await sendTelegramMessage(
-      chatId,
-      `I received your file${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''}. Could you let me know what this is? Is it your resume/CV or introduction video?`
-    );
   }
 }
 
