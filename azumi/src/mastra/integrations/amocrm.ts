@@ -65,7 +65,8 @@ function driveViewLink(url: string | undefined): string | undefined {
   if (!url) return undefined;
   const m = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
   if (m) return `https://drive.google.com/file/d/${m[1]}/view`;
-  return url; // already a view link or other URL — return as-is
+  if (url.includes('drive.google.com')) return url;
+  return undefined;
 }
 
 interface CandidateData {
@@ -238,12 +239,17 @@ async function uploadFileToAmoCRM(
   entityId: number
 ): Promise<string> {
   console.log(`📥 Downloading file from ${fileUrl}...`);
-  const fileResponse = await fetch(fileUrl);
+  const fileResponse = await fetch(fileUrl, { redirect: 'follow' });
   if (!fileResponse.ok) {
-    throw new Error(`Failed to download file: ${fileResponse.status}`);
+    const body = await fileResponse.text().catch(() => '');
+    throw new Error(`Failed to download file: HTTP ${fileResponse.status} ${body.substring(0, 200)}`);
   }
   const fileBuffer = await fileResponse.arrayBuffer();
   const fileBytes = Buffer.from(fileBuffer);
+  if (fileBytes.length === 0) {
+    throw new Error('Downloaded file is empty (0 bytes)');
+  }
+  console.log(`📥 Downloaded ${fileName}: ${(fileBytes.length / 1024).toFixed(1)} KB`);
   const driveUrl = await getDriveUrl();
   const uuid = await uploadFileToDrive(fileBytes, fileName, driveUrl);
   console.log(`📤 Uploaded to Kommo drive: ${fileName} (UUID: ${uuid})`);
@@ -471,8 +477,8 @@ export async function createCandidateLead(data: CandidateData): Promise<{
 ${(data as any).visaDetails ? `• Детали визы: ${(data as any).visaDetails}` : ''}
 
 📋 Документы:
-${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}${data.resumeFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}` : '• Резюме: не предоставлено'}
-${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})${data.introVideoFile.fileUrl ? `\n  Google Drive: ${driveViewLink(data.introVideoFile.fileUrl)}` : ''}` : '• Видео: не предоставлено'}
+${data.resumeFile ? `• Резюме: ${data.resumeFile.fileName || 'приложено'}${driveViewLink(data.resumeFile?.fileUrl) ? `\n  Google Drive: ${driveViewLink(data.resumeFile.fileUrl)}` : ''}` : '• Резюме: не предоставлено'}
+${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'приложено'} (${data.introVideoFile.duration ? Math.floor(data.introVideoFile.duration / 60) + ':' + (data.introVideoFile.duration % 60).toString().padStart(2, '0') : 'длительность неизвестна'})${driveViewLink(data.introVideoFile?.fileUrl) ? `\n  Google Drive: ${driveViewLink(data.introVideoFile.fileUrl)}` : ''}` : '• Видео: не предоставлено'}
 
 📅 Доступность:
 • Готов начать: ${data.availableFrom}
@@ -530,25 +536,27 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
         await uploadFileToAmoCRM(data.resumeFile.fileUrl, fileName, 'leads', leadId);
       
 
-      // Also add a note with the file reference
+      const driveLink = driveViewLink(data.resumeFile.fileUrl);
       await amoRequest('/leads/notes', 'POST', [
         {
           entity_id: leadId,
           note_type: 'common',
           params: {
-            text: `📄 Резюме кандидата приложено: ${fileName}`,
+            text: `📄 Резюме кандидата приложено: ${fileName}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
           },
         },
       ]);
     } catch (error) {
-      console.error('Failed to upload resume, adding URL as note instead:', error);
-      // Fallback: add URL as note if upload fails
+      console.error('Failed to upload resume:', error);
+      const link = driveViewLink(data.resumeFile.fileUrl);
       await amoRequest('/leads/notes', 'POST', [
         {
           entity_id: leadId,
           note_type: 'common',
           params: {
-            text: `📄 Резюме кандидата (ссылка):\n${data.resumeFile.fileUrl}`,
+            text: link
+              ? `📄 Резюме кандидата (ссылка):\n${link}`
+              : `📄 Резюме кандидата: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
           },
         },
       ]);
@@ -565,28 +573,30 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
         console.log('📤 Uploading intro video to amoCRM: %s', fileName);
         await uploadFileToAmoCRM(data.introVideoFile.fileUrl, fileName, 'leads', leadId);
       
-      // Also add a note with the file reference
       const durationInfo = data.introVideoFile.duration
         ? ` (${Math.floor(data.introVideoFile.duration / 60)}:${(data.introVideoFile.duration % 60).toString().padStart(2, '0')})`
         : '';
+      const driveLink = driveViewLink(data.introVideoFile.fileUrl);
       await amoRequest('/leads/notes', 'POST', [
         {
           entity_id: leadId,
           note_type: 'common',
           params: {
-            text: `🎥 Видео-представление кандидата приложено: ${fileName}${durationInfo}`,
+            text: `🎥 Видео-представление кандидата приложено: ${fileName}${durationInfo}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
           },
         },
       ]);
     } catch (error) {
-      console.error('Failed to upload video, adding URL as note instead:', error);
-      // Fallback: add URL as note if upload fails
+      console.error('Failed to upload video:', error);
+      const link = driveViewLink(data.introVideoFile.fileUrl);
       await amoRequest('/leads/notes', 'POST', [
         {
           entity_id: leadId,
           note_type: 'common',
           params: {
-            text: `🎥 Видео-представление кандидата (ссылка):\n${data.introVideoFile.fileUrl}`,
+            text: link
+              ? `🎥 Видео-представление кандидата (ссылка):\n${link}`
+              : `🎥 Видео-представление: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
           },
         },
       ]);

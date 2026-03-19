@@ -425,12 +425,14 @@ async function handleFileUpload(
 
   // Upload to Google Drive for permanent storage (replaces fileUrl with Drive link if configured)
   if (fileUrl) {
-    const driveResult = await uploadFileFromUrl(
-      fileUrl,
-      fileInfo.fileName || (fileInfo.type === 'video' ? 'intro-video.mp4' : 'resume.pdf'),
-      fileInfo.fileType
-    );
-    if (driveResult) fileUrl = driveResult.downloadUrl;
+    const driveName = fileInfo.fileName || (fileInfo.type === 'video' ? 'intro-video.mp4' : 'resume.pdf');
+    const driveResult = await uploadFileFromUrl(fileUrl, driveName, fileInfo.fileType);
+    if (driveResult) {
+      fileUrl = driveResult.downloadUrl;
+      console.log(`✅ File uploaded to Google Drive: ${driveName} → ${driveResult.webViewLink}`);
+    } else {
+      console.warn(`⚠️ Google Drive upload failed for ${driveName}, using Telegram URL (will expire)`);
+    }
   }
 
   // Store the file — the agent will acknowledge receipt via handleTextMessage
