@@ -16,6 +16,13 @@ import { rmSync, existsSync } from 'fs';
 
 const AUTH_FOLDER = process.env.WHATSAPP_AUTH_FOLDER || './whatsapp-auth';
 
+const noop = () => {};
+const silentLogger = {
+  level: 'silent',
+  child: () => silentLogger,
+  trace: noop, debug: noop, info: noop, warn: noop, error: noop,
+} as any;
+
 /** Wipe auth state so next restart triggers a fresh QR scan. */
 export function resetAuth(): void {
   if (existsSync(AUTH_FOLDER)) {
@@ -27,6 +34,7 @@ export function resetAuth(): void {
 let sock: WASocket | null = null;
 let connectionReady = false;
 let latestQr: string | null = null;
+let reconnectAttempt = 0;
 
 /** Get the latest QR code as a data URL (PNG base64) for web display. */
 export async function getQrDataUrl(): Promise<string | null> {
@@ -50,10 +58,18 @@ export function isConnected(): boolean {
 }
 
 export async function startWhatsApp(): Promise<WASocket> {
+  if (sock) {
+    try { sock.ev.removeAllListeners(); sock.end(undefined); } catch {}
+    sock = null;
+  }
+
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
 
   sock = makeWASocket({
     auth: state,
+    logger: silentLogger,
+    browser: ['Azumi', 'Chrome', '120.0.0'],
+    printQRInTerminal: false,
   });
 
   sock.ev.on('creds.update', saveCreds);
@@ -74,16 +90,24 @@ export async function startWhatsApp(): Promise<WASocket> {
       const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
       console.log(
-        `WhatsApp connection closed (status ${statusCode}). ${shouldReconnect ? 'Reconnecting...' : 'Logged out — delete auth folder and restart to re-scan QR.'}`,
+        `[WA] Connection closed (status ${statusCode}). ${shouldReconnect ? 'Reconnecting...' : 'Logged out — delete auth folder and restart to re-scan QR.'}`,
       );
 
       if (shouldReconnect) {
-        startWhatsApp();
+        reconnectAttempt++;
+        const delay = Math.min(reconnectAttempt * 2000, 30_000);
+        console.log(`[WA] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
+        setTimeout(() => {
+          startWhatsApp().catch((err) => {
+            console.error('[WA] Reconnect failed:', err);
+          });
+        }, delay);
       }
     } else if (connection === 'open') {
       connectionReady = true;
+      reconnectAttempt = 0;
       latestQr = null;
-      console.log('✅ WhatsApp connected successfully!');
+      console.log('[WA] WhatsApp connected successfully!');
     }
   });
 
@@ -160,6 +184,7 @@ export async function downloadWhatsAppMedia(
   try {
     const buffer = await downloadMediaMessage(msg as any, 'buffer', {}, {
       reuploadRequest: sock.updateMediaMessage,
+      logger: silentLogger,
     });
     return buffer as Buffer;
   } catch (e) {

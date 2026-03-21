@@ -12,6 +12,13 @@
 
 import 'dotenv/config';
 
+process.on('uncaughtException', (err) => {
+  console.error('[WA] Uncaught exception (keeping process alive):', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[WA] Unhandled rejection (keeping process alive):', reason);
+});
+
 import express from 'express';
 import { startWhatsApp, isConnected, onMessage, getQrDataUrl, hasQrPending, resetAuth } from './whatsapp-client';
 import { handleWhatsAppMessage } from './whatsapp-webhook';

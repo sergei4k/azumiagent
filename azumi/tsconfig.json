@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "outDir": "dist",
-    "types": ["node"],
+    "types": ["node", "qrcode-terminal"],
     "typeRoots": ["../node_modules/@types", "./node_modules/@types"]
   },
   "include": [
