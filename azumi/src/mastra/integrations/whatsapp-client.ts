@@ -87,16 +87,25 @@ export async function startWhatsApp(): Promise<WASocket> {
     if (connection === 'close') {
       connectionReady = false;
       const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
-      const shouldReconnect = statusCode !== DisconnectReason.loggedOut;
 
-      console.log(
-        `[WA] Connection closed (status ${statusCode}). ${shouldReconnect ? 'Reconnecting...' : 'Logged out — delete auth folder and restart to re-scan QR.'}`,
-      );
-
-      if (shouldReconnect) {
+      if (statusCode === DisconnectReason.loggedOut) {
+        console.error('[WA] Logged out. Clearing auth — restart to re-scan QR.');
+        resetAuth();
+      } else if (statusCode === 405) {
+        console.error('[WA] 405 rejected by WhatsApp. Clearing stale auth and retrying fresh...');
+        resetAuth();
+        reconnectAttempt++;
+        const delay = Math.min(reconnectAttempt * 5000, 60_000);
+        console.log(`[WA] Fresh reconnect in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
+        setTimeout(() => {
+          startWhatsApp().catch((err) => {
+            console.error('[WA] Reconnect failed:', err);
+          });
+        }, delay);
+      } else {
         reconnectAttempt++;
         const delay = Math.min(reconnectAttempt * 2000, 30_000);
-        console.log(`[WA] Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
+        console.log(`[WA] Connection closed (status ${statusCode}). Reconnecting in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
         setTimeout(() => {
           startWhatsApp().catch((err) => {
             console.error('[WA] Reconnect failed:', err);
