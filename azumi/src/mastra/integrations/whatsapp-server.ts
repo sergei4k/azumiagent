@@ -83,8 +83,12 @@ app.get('/admin/chats/:chatId', async (req, res) => {
   }
 });
 
-async function start() {
-  await startWhatsApp();
+// Start Express first so Railway sees the port binding, then connect WhatsApp in the background.
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🤖 Azumi WhatsApp Bot server running on port ${PORT}`);
+  console.log(`📱 Visit /qr to scan the WhatsApp QR code`);
+  console.log(`🏥 Health check: GET /health`);
+  console.log(`📊 Admin dashboard: GET /admin`);
 
   onMessage((msg) => {
     handleWhatsAppMessage(msg).catch((err) => {
@@ -92,17 +96,9 @@ async function start() {
     });
   });
 
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🤖 Azumi WhatsApp Bot server running on port ${PORT}`);
-    console.log(`📱 WhatsApp: scan QR code in terminal to connect`);
-    console.log(`🏥 Health check: GET /health`);
-    console.log(`📊 Admin dashboard: GET /admin`);
+  startWhatsApp().catch((err) => {
+    console.error('Failed to start WhatsApp connection:', err);
   });
-}
-
-start().catch((err) => {
-  console.error('Failed to start WhatsApp server:', err);
-  process.exit(1);
 });
 
 export default app;
