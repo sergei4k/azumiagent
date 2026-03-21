@@ -90,14 +90,15 @@ export async function startWhatsApp(): Promise<WASocket> {
 
       if (statusCode === DisconnectReason.loggedOut || statusCode === 405) {
         const reason = statusCode === 405 ? '405 rejected' : 'Logged out';
-        console.error(`[WA] ${reason}. Will close socket, clear auth, and retry fresh...`);
-        try { sock?.ev.removeAllListeners(); sock?.end(undefined); } catch {}
-        sock = null;
-        try { resetAuth(); } catch (e) { console.warn('[WA] Could not clear auth:', e); }
+        console.error(`[WA] ${reason}. Scheduling cleanup and fresh reconnect...`);
         reconnectAttempt++;
         const delay = Math.min(reconnectAttempt * 5000, 60_000);
         console.log(`[WA] Fresh reconnect in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
-        setTimeout(() => {
+        setTimeout(async () => {
+          try { sock?.ev.removeAllListeners(); sock?.end(undefined); } catch {}
+          sock = null;
+          await new Promise((r) => setTimeout(r, 500));
+          try { resetAuth(); } catch (e) { console.warn('[WA] Could not clear auth:', e); }
           startWhatsApp().catch((err) => {
             console.error('[WA] Reconnect failed:', err);
           });
