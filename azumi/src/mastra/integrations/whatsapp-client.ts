@@ -12,7 +12,8 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import qrcodeTerminal from 'qrcode-terminal';
 import QRCode from 'qrcode';
-import { rmSync, existsSync } from 'fs';
+import { rmSync, existsSync, readdirSync } from 'fs';
+import { join } from 'path';
 
 const AUTH_FOLDER = process.env.WHATSAPP_AUTH_FOLDER || './whatsapp-auth';
 
@@ -25,10 +26,11 @@ const silentLogger = {
 
 /** Wipe auth state so next restart triggers a fresh QR scan. */
 export function resetAuth(): void {
-  if (existsSync(AUTH_FOLDER)) {
-    rmSync(AUTH_FOLDER, { recursive: true, force: true });
-    console.log('[WA] Auth folder cleared — restart to get a fresh QR');
+  if (!existsSync(AUTH_FOLDER)) return;
+  for (const file of readdirSync(AUTH_FOLDER)) {
+    try { rmSync(join(AUTH_FOLDER, file), { recursive: true, force: true }); } catch {}
   }
+  console.log('[WA] Auth folder contents cleared');
 }
 
 let sock: WASocket | null = null;
