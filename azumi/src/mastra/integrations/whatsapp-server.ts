@@ -13,7 +13,7 @@
 import 'dotenv/config';
 
 import express from 'express';
-import { startWhatsApp, isConnected, onMessage, getQrDataUrl, hasQrPending } from './whatsapp-client';
+import { startWhatsApp, isConnected, onMessage, getQrDataUrl, hasQrPending, resetAuth } from './whatsapp-client';
 import { handleWhatsAppMessage } from './whatsapp-webhook';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
 import { getAdminDashboardHtml } from './admin-dashboard';
@@ -53,6 +53,11 @@ app.get('/qr', async (_req, res) => {
       <script>setTimeout(()=>location.reload(),15000)</script>
     </body></html>
   `);
+});
+
+app.post('/qr/reset', (_req, res) => {
+  resetAuth();
+  res.json({ ok: true, message: 'Auth cleared. Restart the service to get a new QR.' });
 });
 
 app.get('/admin', (_req, res) => {

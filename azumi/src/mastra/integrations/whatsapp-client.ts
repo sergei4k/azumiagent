@@ -12,8 +12,17 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import qrcodeTerminal from 'qrcode-terminal';
 import QRCode from 'qrcode';
+import { rmSync, existsSync } from 'fs';
 
 const AUTH_FOLDER = process.env.WHATSAPP_AUTH_FOLDER || './whatsapp-auth';
+
+/** Wipe auth state so next restart triggers a fresh QR scan. */
+export function resetAuth(): void {
+  if (existsSync(AUTH_FOLDER)) {
+    rmSync(AUTH_FOLDER, { recursive: true, force: true });
+    console.log('[WA] Auth folder cleared — restart to get a fresh QR');
+  }
+}
 
 let sock: WASocket | null = null;
 let connectionReady = false;
@@ -50,12 +59,13 @@ export async function startWhatsApp(): Promise<WASocket> {
   sock.ev.on('creds.update', saveCreds);
 
   sock.ev.on('connection.update', (update) => {
+    console.log('[WA] connection.update:', JSON.stringify(update, null, 2));
     const { connection, lastDisconnect, qr: qrString } = update;
 
     if (qrString) {
       latestQr = qrString;
-      qrcodeTerminal.generate(qrString, { small: true });
-      console.log('📱 Scan the QR code above, or visit /qr in your browser');
+      console.log('[WA] QR code received, available at /qr');
+      try { qrcodeTerminal.generate(qrString, { small: true }); } catch {}
     }
 
     if (connection === 'close') {
