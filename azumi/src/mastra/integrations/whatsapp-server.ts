@@ -1,107 +1,84 @@
 /**
- * WhatsApp Bot Server
- * Express server to handle Twilio WhatsApp webhooks
- * 
+ * WhatsApp Bot Server (Baileys)
+ * Express server for health/admin endpoints + Baileys persistent connection.
+ *
  * Run with: npx tsx src/mastra/integrations/whatsapp-server.ts
+ *
+ * On first run, scan the QR code printed in the terminal with WhatsApp on your phone.
+ * Auth state is persisted to WHATSAPP_AUTH_FOLDER (default ./whatsapp-auth).
+ * NOTE: On Railway/ephemeral hosts, mount a persistent volume at that path
+ *       so the session survives redeploys.
  */
 
-// Load environment variables from .env file
 import 'dotenv/config';
 
 import express from 'express';
-import { handleWhatsAppWebhook } from './whatsapp-webhook';
-import { WhatsAppMessage } from './whatsapp-client';
-import { initDb } from '../../../db';
+import { startWhatsApp, isConnected, onMessage } from './whatsapp-client';
+import { handleWhatsAppMessage } from './whatsapp-webhook';
+import { getRecentChats, getChatMessages } from '../../../db-pg';
+import { getAdminDashboardHtml } from './admin-dashboard';
 
 const app = express();
-
-// Twilio sends application/x-www-form-urlencoded by default
-app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
-// Use PORT from environment (Railway, Render, etc.) or fallback to WHATSAPP_WEBHOOK_PORT or 3002
-const BASE_PORT = parseInt(process.env.PORT || process.env.WHATSAPP_WEBHOOK_PORT || '3002', 10);
-const PORT_MAX_ATTEMPTS = 10;
+const PORT = parseInt(process.env.PORT || process.env.WHATSAPP_PORT || '3002', 10);
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.json({ status: 'ok', service: 'azumi-whatsapp-bot' });
+app.get('/health', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'azumi-whatsapp-bot',
+    whatsapp_connected: isConnected(),
+  });
 });
 
-// WhatsApp webhook endpoint (Twilio sends POST requests here)
-app.post('/whatsapp/webhook', async (req, res) => {
+app.get('/admin', (_req, res) => {
+  res.type('html').send(getAdminDashboardHtml());
+});
+
+app.get('/admin/chats', async (_req, res) => {
   try {
-    console.log('📨 Received WhatsApp webhook:', JSON.stringify(req.body, null, 2));
-    
-    // Twilio expects a TwiML response, but we'll process asynchronously
-    // Respond immediately with empty TwiML (we'll send messages via API)
-    res.type('text/xml');
-    res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
-    
-    // Process the message asynchronously
-    const message: WhatsAppMessage = {
-      MessageSid: req.body.MessageSid,
-      AccountSid: req.body.AccountSid,
-      From: req.body.From,
-      To: req.body.To,
-      Body: req.body.Body,
-      NumMedia: req.body.NumMedia || '0',
-      MediaUrl0: req.body.MediaUrl0,
-      MediaContentType0: req.body.MediaContentType0,
-      MessageType: req.body.MessageType,
-    };
-    
-    await handleWhatsAppWebhook(message);
-    
+    const chats = await getRecentChats();
+    res.json(chats);
   } catch (error) {
-    console.error('Error in WhatsApp webhook handler:', error);
-    // Still return TwiML to prevent Twilio from retrying
-    if (!res.headersSent) {
-      res.type('text/xml');
-      res.send('<?xml version="1.0" encoding="UTF-8"?><Response></Response>');
-    }
+    console.error('Error fetching chats:', error);
+    res.status(500).json({ error: 'Failed to fetch chats' });
   }
 });
 
-// Start server, trying alternative ports if base port is in use
-async function startServer(port: number, attempt: number): Promise<void> {
-  // Initialize database (create table and add missing columns)
-  try {
-    await initDb();
-    console.log('✅ Database initialized successfully');
-  } catch (error) {
-    console.error('❌ Failed to initialize database:', error);
-    // Don't exit - server can still start, but DB operations will fail
+app.get('/admin/chats/:chatId', async (req, res) => {
+  const chatIdNum = Number(req.params.chatId);
+  if (!Number.isFinite(chatIdNum)) {
+    return res.status(400).json({ error: 'Invalid chatId' });
   }
+  try {
+    const messages = await getChatMessages(chatIdNum);
+    res.json(messages);
+  } catch (error) {
+    console.error('Error fetching chat messages:', error);
+    res.status(500).json({ error: 'Failed to fetch messages' });
+  }
+});
 
-  const server = app.listen(port, '0.0.0.0', () => {
-    console.log(`🤖 Azumi WhatsApp Bot server running on port ${port}`);
-    console.log(`📡 Webhook endpoint: POST /whatsapp/webhook`);
-    console.log(`\nTo configure Twilio webhook:`);
-    console.log(`  1. Go to Twilio Console → Messaging → Try it out → Send a WhatsApp message`);
-    console.log(`  2. Set "When a message comes in" to: https://your-domain.com/whatsapp/webhook`);
-    console.log(`  3. Make sure these env vars are set:`);
-    console.log(`     - TWILIO_ACCOUNT_SID`);
-    console.log(`     - TWILIO_AUTH_TOKEN`);
-    console.log(`     - TWILIO_WHATSAPP_FROM (optional, defaults to sandbox number)`);
+async function start() {
+  await startWhatsApp();
+
+  onMessage((msg) => {
+    handleWhatsAppMessage(msg).catch((err) => {
+      console.error('[WA] Unhandled error in message handler:', err);
+    });
   });
 
-  server.on('error', (err: NodeJS.ErrnoException) => {
-    if (err.code === 'EADDRINUSE' && attempt < PORT_MAX_ATTEMPTS) {
-      const nextPort = BASE_PORT + attempt;
-      console.warn(`⚠️ Port ${port} in use, trying ${nextPort}...`);
-      console.warn(`   If using ngrok, run: ngrok http ${nextPort}`);
-      startServer(nextPort, attempt + 1);
-    } else {
-      console.error('Failed to start server:', err.message);
-      if (err.code === 'EADDRINUSE') {
-        console.error(`   Port ${port} is in use. Kill the other process or set WHATSAPP_WEBHOOK_PORT to a different port.`);
-      }
-      process.exit(1);
-    }
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🤖 Azumi WhatsApp Bot server running on port ${PORT}`);
+    console.log(`📱 WhatsApp: scan QR code in terminal to connect`);
+    console.log(`🏥 Health check: GET /health`);
+    console.log(`📊 Admin dashboard: GET /admin`);
   });
 }
 
-startServer(BASE_PORT, 1);
+start().catch((err) => {
+  console.error('Failed to start WhatsApp server:', err);
+  process.exit(1);
+});
 
 export default app;
