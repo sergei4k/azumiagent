@@ -88,12 +88,12 @@ export async function startWhatsApp(): Promise<WASocket> {
       connectionReady = false;
       const statusCode = (lastDisconnect?.error as any)?.output?.statusCode;
 
-      if (statusCode === DisconnectReason.loggedOut) {
-        console.error('[WA] Logged out. Clearing auth — restart to re-scan QR.');
-        resetAuth();
-      } else if (statusCode === 405) {
-        console.error('[WA] 405 rejected by WhatsApp. Clearing stale auth and retrying fresh...');
-        resetAuth();
+      if (statusCode === DisconnectReason.loggedOut || statusCode === 405) {
+        const reason = statusCode === 405 ? '405 rejected' : 'Logged out';
+        console.error(`[WA] ${reason}. Will close socket, clear auth, and retry fresh...`);
+        try { sock?.ev.removeAllListeners(); sock?.end(undefined); } catch {}
+        sock = null;
+        try { resetAuth(); } catch (e) { console.warn('[WA] Could not clear auth:', e); }
         reconnectAttempt++;
         const delay = Math.min(reconnectAttempt * 5000, 60_000);
         console.log(`[WA] Fresh reconnect in ${delay / 1000}s (attempt ${reconnectAttempt})...`);
