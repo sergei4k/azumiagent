@@ -10,12 +10,24 @@ import makeWASocket, {
   type proto,
   downloadMediaMessage,
 } from '@whiskeysockets/baileys';
-import qrcode from 'qrcode-terminal';
+import qrcodeTerminal from 'qrcode-terminal';
+import QRCode from 'qrcode';
 
 const AUTH_FOLDER = process.env.WHATSAPP_AUTH_FOLDER || './whatsapp-auth';
 
 let sock: WASocket | null = null;
 let connectionReady = false;
+let latestQr: string | null = null;
+
+/** Get the latest QR code as a data URL (PNG base64) for web display. */
+export async function getQrDataUrl(): Promise<string | null> {
+  if (!latestQr) return null;
+  return QRCode.toDataURL(latestQr, { width: 400 });
+}
+
+export function hasQrPending(): boolean {
+  return latestQr !== null;
+}
 
 type MessageHandler = (msg: proto.IWebMessageInfo) => void;
 let onMessageHandler: MessageHandler | null = null;
@@ -41,8 +53,9 @@ export async function startWhatsApp(): Promise<WASocket> {
     const { connection, lastDisconnect, qr: qrString } = update;
 
     if (qrString) {
-      qrcode.generate(qrString, { small: true });
-      console.log('📱 Scan the QR code above with WhatsApp on your phone');
+      latestQr = qrString;
+      qrcodeTerminal.generate(qrString, { small: true });
+      console.log('📱 Scan the QR code above, or visit /qr in your browser');
     }
 
     if (connection === 'close') {
@@ -59,6 +72,7 @@ export async function startWhatsApp(): Promise<WASocket> {
       }
     } else if (connection === 'open') {
       connectionReady = true;
+      latestQr = null;
       console.log('✅ WhatsApp connected successfully!');
     }
   });

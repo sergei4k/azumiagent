@@ -13,7 +13,7 @@
 import 'dotenv/config';
 
 import express from 'express';
-import { startWhatsApp, isConnected, onMessage } from './whatsapp-client';
+import { startWhatsApp, isConnected, onMessage, getQrDataUrl, hasQrPending } from './whatsapp-client';
 import { handleWhatsAppMessage } from './whatsapp-webhook';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
 import { getAdminDashboardHtml } from './admin-dashboard';
@@ -29,6 +29,30 @@ app.get('/health', (_req, res) => {
     service: 'azumi-whatsapp-bot',
     whatsapp_connected: isConnected(),
   });
+});
+
+app.get('/qr', async (_req, res) => {
+  if (isConnected()) {
+    return res.type('html').send('<h1>WhatsApp is already connected</h1>');
+  }
+  if (!hasQrPending()) {
+    return res.type('html').send(
+      '<h1>No QR code yet</h1><p>Waiting for WhatsApp to generate one... Refresh in a few seconds.</p><script>setTimeout(()=>location.reload(),3000)</script>',
+    );
+  }
+  const dataUrl = await getQrDataUrl();
+  if (!dataUrl) {
+    return res.type('html').send('<h1>QR expired — refresh to retry</h1>');
+  }
+  res.type('html').send(`
+    <html><body style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;background:#111;color:#fff">
+      <h1>Scan with WhatsApp</h1>
+      <p>Open WhatsApp → Settings → Linked Devices → Link a Device</p>
+      <img src="${dataUrl}" style="border-radius:12px" />
+      <p style="color:#888;margin-top:16px">This page auto-refreshes every 15s</p>
+      <script>setTimeout(()=>location.reload(),15000)</script>
+    </body></html>
+  `);
 });
 
 app.get('/admin', (_req, res) => {
