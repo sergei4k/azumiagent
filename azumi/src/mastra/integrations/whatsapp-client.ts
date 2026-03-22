@@ -6,6 +6,7 @@
 import makeWASocket, {
   DisconnectReason,
   useMultiFileAuthState,
+  fetchLatestBaileysVersion,
   type WASocket,
   type proto,
   downloadMediaMessage,
@@ -67,11 +68,21 @@ export async function startWhatsApp(): Promise<WASocket> {
 
   const { state, saveCreds } = await useMultiFileAuthState(AUTH_FOLDER);
 
+  let version: [number, number, number] | undefined;
+  try {
+    const fetched = await fetchLatestBaileysVersion();
+    version = fetched.version;
+    console.log(`[WA] Using WhatsApp Web version: ${version.join('.')}`);
+  } catch (e) {
+    console.warn('[WA] Could not fetch latest version, using default');
+  }
+
   sock = makeWASocket({
     auth: state,
     logger: silentLogger,
     browser: ['Azumi', 'Chrome', '120.0.0'],
     printQRInTerminal: false,
+    ...(version ? { version } : {}),
   });
 
   sock.ev.on('creds.update', saveCreds);
