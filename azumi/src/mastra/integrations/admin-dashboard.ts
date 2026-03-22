@@ -295,8 +295,7 @@ export function getAdminDashboardHtml(): string {
     font-size: 13px;
   }
 
-  .refresh-btn {
-    background: var(--accent);
+  .refresh-btn, .pause-btn {
     color: #fff;
     border: none;
     padding: 6px 14px;
@@ -306,8 +305,32 @@ export function getAdminDashboardHtml(): string {
     transition: background 0.2s;
   }
 
+  .refresh-btn {
+    background: var(--accent);
+  }
+
   .refresh-btn:hover {
     background: var(--accent-light);
+  }
+
+  .pause-btn {
+    background: #e67e22;
+  }
+
+  .pause-btn:hover {
+    background: #f39c12;
+  }
+
+  .pause-btn.paused {
+    background: var(--green);
+  }
+
+  .pause-btn.paused:hover {
+    background: #2ecc71;
+  }
+
+  .chat-item.paused .chat-avatar {
+    background: #e67e22;
   }
 
   /* ── Scrollbar ── */
@@ -363,11 +386,29 @@ export function getAdminDashboardHtml(): string {
 <script>
   let chats = [];
   let activeChatId = null;
+  let pausedChatIds = new Set();
+
+  async function loadPausedChats() {
+    try {
+      const res = await fetch('/admin/paused');
+      const data = await res.json();
+      pausedChatIds = new Set(data.paused || []);
+    } catch (e) {}
+  }
+
+  async function togglePause(chatId, name) {
+    const isPaused = pausedChatIds.has(chatId);
+    const endpoint = '/admin/chats/' + encodeURIComponent(chatId) + (isPaused ? '/resume' : '/pause');
+    await fetch(endpoint, { method: 'POST' });
+    await loadPausedChats();
+    if (activeChatId === chatId) openChat(chatId, name);
+    renderChatList(document.getElementById('search').value);
+  }
 
   async function loadChats() {
     try {
-      const res = await fetch('/admin/chats');
-      chats = await res.json();
+      const [chatsRes] = await Promise.all([fetch('/admin/chats'), loadPausedChats()]);
+      chats = await chatsRes.json();
       renderChatList();
     } catch (e) {
       document.getElementById('chat-list').innerHTML = '<div class="loading">Failed to load chats</div>';
@@ -396,10 +437,12 @@ export function getAdminDashboardHtml(): string {
       const time = formatRelativeTime(c.last_message_at);
       const preview = (c.last_text || '').substring(0, 60);
       const isActive = c.chat_id === activeChatId ? ' active' : '';
-      return '<div class="chat-item' + isActive + '" onclick="openChat(' + c.chat_id + ', \\'' + escHtml(name) + '\\')">' +
+      const isPaused = pausedChatIds.has(String(c.chat_id)) ? ' paused' : '';
+      const pauseLabel = isPaused ? '⏸' : '';
+      return '<div class="chat-item' + isActive + isPaused + '" onclick="openChat(' + c.chat_id + ', \\'' + escHtml(name) + '\\')">' +
         '<div class="chat-avatar">' + initial + '</div>' +
         '<div class="chat-info">' +
-          '<div class="chat-name"><span>' + escHtml(name) + '</span><span class="chat-time">' + time + '</span></div>' +
+          '<div class="chat-name"><span>' + pauseLabel + ' ' + escHtml(name) + '</span><span class="chat-time">' + time + '</span></div>' +
           '<div class="chat-preview">' + escHtml(preview) + '</div>' +
         '</div>' +
         '<span class="chat-badge">' + (c.message_count || '?') + '</span>' +
@@ -413,11 +456,16 @@ export function getAdminDashboardHtml(): string {
     document.getElementById('app').classList.add('chat-open');
 
     const main = document.getElementById('main-panel');
+    const isPaused = pausedChatIds.has(String(chatId));
+    const pauseBtnClass = 'pause-btn' + (isPaused ? ' paused' : '');
+    const pauseBtnLabel = isPaused ? 'Resume Bot' : 'Pause Bot';
     main.innerHTML =
       '<div class="main-header">' +
         '<div><button class="back-btn" onclick="goBack()">&#8592;</button>' +
-        '<h2 style="display:inline">' + escHtml(name) + '</h2></div>' +
+        '<h2 style="display:inline">' + escHtml(name) + '</h2>' +
+        (isPaused ? ' <span style="color:#e67e22;font-size:12px;margin-left:8px">⏸ Bot paused</span>' : '') + '</div>' +
         '<div><span class="chat-id-label">ID: ' + chatId + '</span>' +
+        '&nbsp;&nbsp;<button class="' + pauseBtnClass + '" onclick="togglePause(\\'' + chatId + '\\', \\'' + escHtml(name) + '\\')">' + pauseBtnLabel + '</button>' +
         '&nbsp;&nbsp;<button class="refresh-btn" onclick="openChat(' + chatId + ', \\'' + escHtml(name) + '\\')">Refresh</button></div>' +
       '</div>' +
       '<div class="messages" id="messages"><div class="loading">Loading messages...</div></div>';

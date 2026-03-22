@@ -21,7 +21,7 @@ process.on('unhandledRejection', (reason) => {
 
 import express from 'express';
 import { startWhatsApp, isConnected, onMessage, getQrDataUrl, hasQrPending, resetAuth } from './whatsapp-client';
-import { handleWhatsAppMessage } from './whatsapp-webhook';
+import { handleWhatsAppMessage, pauseChat, resumeChat, isChatPaused, getPausedChats } from './whatsapp-webhook';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
 import { getAdminDashboardHtml } from './admin-dashboard';
 
@@ -93,6 +93,25 @@ app.get('/admin/chats/:chatId', async (req, res) => {
     console.error('Error fetching chat messages:', error);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
+});
+
+app.post('/admin/chats/:chatId/pause', (req, res) => {
+  const chatId = req.params.chatId;
+  const jid = chatId.includes('@') ? chatId : chatId + '@s.whatsapp.net';
+  pauseChat(jid);
+  res.json({ ok: true, paused: true, chatId });
+});
+
+app.post('/admin/chats/:chatId/resume', (req, res) => {
+  const chatId = req.params.chatId;
+  const jid = chatId.includes('@') ? chatId : chatId + '@s.whatsapp.net';
+  resumeChat(jid);
+  res.json({ ok: true, paused: false, chatId });
+});
+
+app.get('/admin/paused', (_req, res) => {
+  const paused = getPausedChats().map(jid => jid.replace(/@.*$/, ''));
+  res.json({ paused });
 });
 
 // Start Express first so Railway sees the port binding, then connect WhatsApp in the background.

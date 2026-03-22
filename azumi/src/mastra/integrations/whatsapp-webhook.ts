@@ -18,6 +18,26 @@ import { fileStoreByPhone, type FileStoreEntry } from './shared-file-store';
 import { uploadFileBuffer } from './google-drive';
 import { logTelegramMessage } from '../../../db-pg';
 
+const pausedChats = new Set<string>();
+
+export function pauseChat(jid: string): void {
+  pausedChats.add(jid);
+  console.log(`⏸️ [WA] Bot paused for ${jid}`);
+}
+
+export function resumeChat(jid: string): void {
+  pausedChats.delete(jid);
+  console.log(`▶️ [WA] Bot resumed for ${jid}`);
+}
+
+export function isChatPaused(jid: string): boolean {
+  return pausedChats.has(jid);
+}
+
+export function getPausedChats(): string[] {
+  return Array.from(pausedChats);
+}
+
 const userContexts: Map<
   string,
   {
@@ -166,6 +186,11 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
   const pushName = msg.pushName || phone;
   const dbId = phoneToDbId(phone);
   const text = extractText(msg);
+
+  if (pausedChats.has(jid)) {
+    console.log(`⏸️ [WA] Skipping (paused): ${pushName} (${phone}): ${text || '[file]'}`);
+    return;
+  }
 
   console.log(`📩 [WA] Message from ${pushName} (${phone}): ${text || '[file]'}`);
 
