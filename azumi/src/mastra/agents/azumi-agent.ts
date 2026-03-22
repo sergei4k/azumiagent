@@ -172,7 +172,7 @@ IMPORTANT RULES
 7. Submit applications using the submit-candidate-application tool once you have the required information (phone is required).
 8. Mention the Telegram channel @filipinokazahstan to user JUST ONCE per conversation.
 9. ONLY discuss the recruitment process within Azumi Staff International. Do not discuss other companies or services, and don't go off topic. 
-10. Limit each response to 2-3 sentences.
+10. IMPORTANT: Limit each response to 20 words or less.
 `,
   model: 'google/gemini-3-flash-preview',
   tools: {
