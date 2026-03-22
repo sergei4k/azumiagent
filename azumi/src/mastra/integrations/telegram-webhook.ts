@@ -14,7 +14,26 @@ import {
   getFileUrl,
 } from './telegram-client';
 
-// Store conversation context per user (in production, use Redis or database)
+const pausedChats = new Set<number>();
+
+export function pauseTelegramChat(chatId: number): void {
+  pausedChats.add(chatId);
+  console.log(`⏸️ [TG] Bot paused for chat ${chatId}`);
+}
+
+export function resumeTelegramChat(chatId: number): void {
+  pausedChats.delete(chatId);
+  console.log(`▶️ [TG] Bot resumed for chat ${chatId}`);
+}
+
+export function isTelegramChatPaused(chatId: number): boolean {
+  return pausedChats.has(chatId);
+}
+
+export function getPausedTelegramChats(): number[] {
+  return Array.from(pausedChats);
+}
+
 const userContexts: Map<number, {
   lastMessageTime: number;
   pendingFiles: {
@@ -132,7 +151,12 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
   const chatId = message.chat.id;
   const userId = message.from.id;
   const userFirstName = message.from.first_name;
-  
+
+  if (pausedChats.has(chatId)) {
+    console.log(`⏸️ [TG] Skipping (paused): ${userFirstName} (${chatId}): ${message.text || '[file]'}`);
+    return;
+  }
+
   console.log(`📩 Received message from ${userFirstName} (${userId}): ${message.text || '[file]'}`);
 
   // Log incoming user message (text or caption or file placeholder)

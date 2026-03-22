@@ -333,6 +333,35 @@ export function getAdminDashboardHtml(): string {
     background: #e67e22;
   }
 
+  .wa-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    margin-left: 12px;
+  }
+
+  .wa-status .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .wa-status.connected .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .wa-status.disconnected .dot { background: #e74c3c; box-shadow: 0 0 6px #e74c3c; }
+  .wa-status.waiting_qr .dot { background: #f39c12; box-shadow: 0 0 6px #f39c12; animation: pulse 1.5s infinite; }
+  .wa-status.unavailable .dot { background: var(--text-muted); }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
   /* ── Scrollbar ── */
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -364,7 +393,7 @@ export function getAdminDashboardHtml(): string {
 <div class="app" id="app">
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1>Azumi Conversations</h1>
+      <h1>Azumi Conversations <span class="wa-status disconnected" id="wa-status"><span class="dot"></span><span id="wa-status-label">...</span></span></h1>
       <div class="subtitle" id="chat-count">Loading...</div>
     </div>
     <div class="search-box">
@@ -387,6 +416,29 @@ export function getAdminDashboardHtml(): string {
   let chats = [];
   let activeChatId = null;
   let pausedChatIds = new Set();
+
+  const statusLabels = {
+    connected: 'WA Connected',
+    disconnected: 'WA Disconnected',
+    waiting_qr: 'Waiting for QR',
+    unavailable: 'WA N/A',
+  };
+
+  async function pollWaStatus() {
+    try {
+      const res = await fetch('/admin/wa-status');
+      const data = await res.json();
+      const el = document.getElementById('wa-status');
+      const label = document.getElementById('wa-status-label');
+      el.className = 'wa-status ' + (data.state || 'disconnected');
+      label.textContent = statusLabels[data.state] || 'Unknown';
+    } catch {
+      const el = document.getElementById('wa-status');
+      const label = document.getElementById('wa-status-label');
+      el.className = 'wa-status disconnected';
+      label.textContent = 'WA Offline';
+    }
+  }
 
   async function loadPausedChats() {
     try {
@@ -568,7 +620,9 @@ export function getAdminDashboardHtml(): string {
   });
 
   loadChats();
+  pollWaStatus();
   setInterval(loadChats, 30000);
+  setInterval(pollWaStatus, 10000);
 </script>
 </body>
 </html>`;

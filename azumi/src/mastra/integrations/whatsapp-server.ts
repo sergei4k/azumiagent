@@ -95,6 +95,16 @@ app.get('/admin/chats/:chatId', async (req, res) => {
   }
 });
 
+app.get('/admin/wa-status', (_req, res) => {
+  const connected = isConnected();
+  const qrPending = hasQrPending();
+  let state: string;
+  if (connected) state = 'connected';
+  else if (qrPending) state = 'waiting_qr';
+  else state = 'disconnected';
+  res.json({ state, connected, qrPending });
+});
+
 app.post('/admin/chats/:chatId/pause', (req, res) => {
   const chatId = req.params.chatId;
   const jid = chatId.includes('@') ? chatId : chatId + '@s.whatsapp.net';

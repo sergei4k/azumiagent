@@ -15,6 +15,7 @@ import { createUploadRouter } from './file-upload-server';
 import { getRecentChats, getChatMessages } from '../../../db-pg';
 
 import { getAdminDashboardHtml } from './admin-dashboard';
+import { pauseTelegramChat, resumeTelegramChat, getPausedTelegramChats } from './telegram-webhook';
 
 const app = express();
 app.use(express.json());
@@ -59,6 +60,29 @@ app.get('/admin/chats/:chatId', async (req, res) => {
     console.error('Error fetching chat messages:', error);
     res.status(500).json({ error: 'Failed to fetch messages' });
   }
+});
+
+app.get('/admin/wa-status', (_req, res) => {
+  res.json({ state: 'unavailable', connected: false, qrPending: false });
+});
+
+app.post('/admin/chats/:chatId/pause', (req, res) => {
+  const chatId = Number(req.params.chatId);
+  if (!Number.isFinite(chatId)) return res.status(400).json({ error: 'Invalid chatId' });
+  pauseTelegramChat(chatId);
+  res.json({ ok: true, paused: true, chatId });
+});
+
+app.post('/admin/chats/:chatId/resume', (req, res) => {
+  const chatId = Number(req.params.chatId);
+  if (!Number.isFinite(chatId)) return res.status(400).json({ error: 'Invalid chatId' });
+  resumeTelegramChat(chatId);
+  res.json({ ok: true, paused: false, chatId });
+});
+
+app.get('/admin/paused', (_req, res) => {
+  const paused = getPausedTelegramChats().map(String);
+  res.json({ paused });
 });
 
 // Telegram webhook endpoint
