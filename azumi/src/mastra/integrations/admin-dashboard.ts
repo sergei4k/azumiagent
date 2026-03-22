@@ -397,12 +397,36 @@ export function getAdminDashboardHtml(): string {
   }
 
   async function togglePause(chatId, name) {
-    const isPaused = pausedChatIds.has(chatId);
+    const isPaused = pausedChatIds.has(String(chatId));
     const endpoint = '/admin/chats/' + encodeURIComponent(chatId) + (isPaused ? '/resume' : '/pause');
-    await fetch(endpoint, { method: 'POST' });
-    await loadPausedChats();
+    try {
+      const res = await fetch(endpoint, { method: 'POST' });
+      if (!res.ok) throw new Error('Request failed');
+      if (isPaused) {
+        pausedChatIds.delete(String(chatId));
+        showToast('Bot resumed for ' + name, 'var(--green)');
+      } else {
+        pausedChatIds.add(String(chatId));
+        showToast('Bot paused for ' + name, '#e67e22');
+      }
+    } catch (e) {
+      showToast('Failed to update', '#e74c3c');
+    }
     if (activeChatId === chatId) openChat(chatId, name);
     renderChatList(document.getElementById('search').value);
+  }
+
+  function showToast(msg, color) {
+    const el = document.createElement('div');
+    el.textContent = msg;
+    Object.assign(el.style, {
+      position: 'fixed', bottom: '24px', right: '24px', background: color,
+      color: '#fff', padding: '10px 20px', borderRadius: '8px', fontSize: '13px',
+      fontWeight: '500', zIndex: '9999', transition: 'opacity 0.3s',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    });
+    document.body.appendChild(el);
+    setTimeout(() => { el.style.opacity = '0'; setTimeout(() => el.remove(), 300); }, 2500);
   }
 
   async function loadChats() {
