@@ -324,14 +324,46 @@ export async function searchCandidateInCRM(params: {
       const contacts = contactRes?._embedded?.contacts;
       if (!contacts?.length) continue;
 
-      const contact = contacts[0];
+      // Find a contact whose phone actually matches (digits-only comparison)
+      const normalize = (s: string) => s.replace(/\D/g, '');
+      const searchDigits = query ? normalize(query) : '';
 
-      // Extract phone and email from custom fields
+      let contact = null;
       let contactPhone: string | undefined;
       let contactEmail: string | undefined;
-      for (const field of contact.custom_fields_values || []) {
-        if (field.field_code === 'PHONE') contactPhone = field.values?.[0]?.value;
-        if (field.field_code === 'EMAIL') contactEmail = field.values?.[0]?.value;
+
+      for (const c of contacts) {
+        let cPhone: string | undefined;
+        let cEmail: string | undefined;
+        for (const field of c.custom_fields_values || []) {
+          if (field.field_code === 'PHONE') cPhone = field.values?.[0]?.value;
+          if (field.field_code === 'EMAIL') cEmail = field.values?.[0]?.value;
+        }
+
+        if (params.phone && searchDigits.length >= 7 && cPhone) {
+          const cDigits = normalize(cPhone);
+          if (cDigits.endsWith(searchDigits) || searchDigits.endsWith(cDigits)) {
+            contact = c;
+            contactPhone = cPhone;
+            contactEmail = cEmail;
+            break;
+          }
+        } else if (params.email && cEmail && cEmail.toLowerCase() === query.toLowerCase()) {
+          contact = c;
+          contactPhone = cPhone;
+          contactEmail = cEmail;
+          break;
+        } else if (params.name) {
+          contact = c;
+          contactPhone = cPhone;
+          contactEmail = cEmail;
+          break;
+        }
+      }
+
+      if (!contact) {
+        console.log(`🔍 amoCRM: query "${query}" returned ${contacts.length} result(s) but none matched exactly`);
+        continue;
       }
 
       // Get linked lead IDs from embedded data
