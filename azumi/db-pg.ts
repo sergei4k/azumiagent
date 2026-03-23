@@ -132,6 +132,7 @@ export async function getRecentChats(): Promise<
   try {
     await ensureMessagesTable();
     await ensureActivityTable();
+    await initDb();
     const result = await pool.query(
       `
       SELECT
@@ -139,11 +140,18 @@ export async function getRecentChats(): Promise<
         MAX(m.created_at) AS last_message_at,
         (ARRAY_AGG(m.text ORDER BY m.created_at DESC))[1] AS last_text,
         COUNT(*)::int AS message_count,
-        ca.first_name,
+        COALESCE(NULLIF(TRIM(MAX(c.name)), ''), MAX(ca.first_name)) AS first_name,
         (ARRAY_AGG(m.channel ORDER BY m.created_at DESC))[1] AS channel
       FROM telegram_messages m
       LEFT JOIN candidate_activity ca ON ca.chat_id = m.chat_id
-      GROUP BY m.chat_id, ca.first_name
+      LEFT JOIN candidates c ON (
+        m.channel = 'whatsapp'
+        AND CAST(
+          NULLIF(RIGHT(REGEXP_REPLACE(COALESCE(c.normalized_phone, ''), '\\D', '', 'g'), 15), '')
+          AS BIGINT
+        ) = m.chat_id
+      )
+      GROUP BY m.chat_id
       ORDER BY last_message_at DESC
       LIMIT 100
       `,

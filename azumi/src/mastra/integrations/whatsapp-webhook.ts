@@ -16,9 +16,41 @@ import {
 
 import { fileStoreByPhone, type FileStoreEntry } from './shared-file-store';
 import { uploadFileBuffer } from './google-drive';
-import { logTelegramMessage } from '../../../db-pg';
+import { logTelegramMessage, upsertCandidateActivity } from '../../../db-pg';
+import { searchCandidateInCRM } from './amocrm';
 
 const pausedChats = new Set<string>();
+
+/**
+ * Server-side CRM lookup by WhatsApp number (same phone used in CRM).
+ * Injected into the agent prompt for tooling (applicationId) — not shown to the user verbatim.
+ */
+async function buildWhatsappCrmPreface(phone: string): Promise<string> {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return '[WA·CRM] number too short to search.';
+  }
+  const phoneQuery = phone.trim().startsWith('+') ? phone.trim() : `+${digits}`;
+  try {
+    const r = await searchCandidateInCRM({ phone: phoneQuery });
+    if (!r.found || !r.contact) {
+      return '[WA·CRM] no contact matched this WhatsApp number.';
+    }
+    const latestLead = r.leads[0];
+    const applicationId = latestLead ? `AZM-${latestLead.id}` : `CRM-${r.contact.id}`;
+    console.log(
+      `[WA] CRM pre-search by phone: matched "${r.contact.name}" → ${applicationId} (${r.leads.length} lead(s))`,
+    );
+    return (
+      `[WA·CRM] contact "${r.contact.name}", applicationId ${applicationId}. ` +
+      `Server already matched this WhatsApp number — do NOT call lookup-candidate on WhatsApp. ` +
+      `Use applicationId only for attach-files or add-note. Never disclose status or pipeline to the candidate.`
+    );
+  } catch (e) {
+    console.warn('[WA] CRM pre-search failed:', e);
+    return '[WA·CRM] search failed or unavailable.';
+  }
+}
 
 export function pauseChat(jid: string): void {
   pausedChats.add(jid);
@@ -212,6 +244,13 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
       text: logText,
       channel: 'whatsapp',
     });
+
+    const displayName = (msg.pushName || '').trim() || phone;
+    await upsertCandidateActivity({
+      chatId: dbId,
+      userId: dbId,
+      firstName: displayName,
+    });
   } catch (e) {
     console.warn('[WA] Failed to log incoming message:', e);
   }
@@ -284,9 +323,12 @@ async function handleTextMessage(
 
   const agent = mastra.getAgent('azumiAgent');
 
+  const crmPreface = await buildWhatsappCrmPreface(phone);
+  const textForAgent = `${crmPreface}\n\n---\nCandidate message:\n${text}`;
+
   let response;
   try {
-    response = await agent.generate(text, {
+    response = await agent.generate(textForAgent, {
       memory: {
         thread: `whatsapp-${phone}`,
         resource: `whatsapp-user-${phone}`,
@@ -343,8 +385,8 @@ async function handleTextMessage(
 
       if (toolName === 'lookup-candidate') {
         responseText = toolResult?.found
-          ? "I've checked our records. How can I help you today?"
-          : "I don't see an existing application. Let's start a new one!";
+          ? 'Our team will get back to you soon.'
+          : 'We can continue and collect your application details here.';
       } else if (toolName === 'submit-candidate-application') {
         responseText = toolResult?.success
           ? 'Thank you! Your application has been submitted. Our team will review it and get back to you soon.'

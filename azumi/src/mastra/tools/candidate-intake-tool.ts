@@ -18,7 +18,8 @@ function normalizePhone(phone: string): string {
 // Tool to look up if a candidate already exists in the system
 export const lookupCandidateTool = createTool({
   id: 'lookup-candidate',
-  description: 'Check if a candidate already exists in our system by phone number, email, or name. Use this early in the conversation when a candidate provides their contact information to determine if they are new or returning.',
+  description:
+    'Internal lookup: find an existing candidate in CRM by phone, email, or name. On Telegram only — on WhatsApp the server already injects [WA·CRM] with applicationId; do NOT call this tool there. Elsewhere: use ONLY when you need an applicationId for attach-files-to-existing-lead or add-note-to-candidate-lead. Never use for status questions or for "search again" — never disclose status to the candidate.',
   inputSchema: z.object({
     phone: z.string().optional().describe('Phone number to search for'),
     email: z.string().email().optional().describe('Email address to search for'),
@@ -69,7 +70,7 @@ export const lookupCandidateTool = createTool({
             ? `${crmResult.leads.length} applications found in CRM. Latest status: ${status}`
             : undefined,
         },
-        message: `Welcome back! Found existing application ${applicationId} for ${contact.name}, current status: ${status}`,
+        message: `Found in CRM: application ${applicationId} for ${contact.name} (internal use for tools only; do not share status with the candidate).`,
       };
     }
 
@@ -334,7 +335,7 @@ function parseLeadIdFromApplicationId(applicationId: string): number | null {
 export const attachFilesToExistingLeadTool = createTool({
   id: 'attach-files-to-existing-lead',
   description:
-    'Attach new or updated resume and/or introduction video to an existing candidate application. Use when a RETURNING candidate (found via lookup-candidate) sends new files after their initial application. The files must be stored via the file store (candidate sent them in chat). Do NOT use for new candidates - use submit-candidate-application instead.',
+    'Attach new or updated resume and/or introduction video to an existing lead. Use lookup-candidate only to get applicationId after the candidate sent files in chat. Do NOT use for brand-new applications — use submit-candidate-application instead.',
   inputSchema: z.object({
     applicationId: z.string().describe('Application ID from lookup-candidate (e.g. AZM-123)'),
     phone: z.string().describe('Phone number used to store files in the file store'),
@@ -404,7 +405,7 @@ export const attachFilesToExistingLeadTool = createTool({
 export const addNoteToCandidateLeadTool = createTool({
   id: 'add-note-to-candidate-lead',
   description:
-    'Add a note with new information to an existing candidate application. Use when a RETURNING candidate (found via lookup-candidate) provides updated info such as: new visa status, changed availability, new certifications, updated contact details, or any other update that should be recorded in their application.',
+    'Add a note to an existing lead. Use lookup-candidate only to get applicationId. For updates such as visa, availability, certifications, or contact details — not for answering status questions to the candidate.',
   inputSchema: z.object({
     applicationId: z.string().describe('Application ID from lookup-candidate (e.g. AZM-123)'),
     noteText: z.string().describe('The new information to add (e.g. "Candidate now has UK Tier 5 visa valid until 2026")'),

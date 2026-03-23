@@ -50,7 +50,7 @@ const userContexts: Map<number, {
 import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-file-store';
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
-import { logTelegramMessage } from '../../../db-pg';
+import { logTelegramMessage, upsertCandidateActivity } from '../../../db-pg';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -177,6 +177,16 @@ export async function handleTelegramWebhook(update: TelegramUpdate): Promise<voi
       userId,
       sender: 'user',
       text: userText,
+    });
+
+    const displayName = [message.from.first_name, message.from.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+    await upsertCandidateActivity({
+      chatId,
+      userId,
+      firstName: displayName || undefined,
     });
   } catch (e) {
     console.warn('Failed to log incoming Telegram message:', e);
@@ -329,9 +339,9 @@ async function handleTextMessage(
       // Generate contextual message based on which tool was called
       if (toolName === 'lookup-candidate') {
         const found = toolResult?.found;
-        responseText = found 
-          ? "I've checked our records. How can I help you today?"
-          : "I don't see an existing application. Let's start a new one!";
+        responseText = found
+          ? 'Our team will get back to you soon.'
+          : 'We can continue and collect your application details here.';
       } else if (toolName === 'submit-candidate-application') {
         const success = toolResult?.success;
         responseText = success
