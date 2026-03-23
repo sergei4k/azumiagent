@@ -25,6 +25,7 @@ import { fileStoreByPhone, type FileStoreEntry } from './shared-file-store';
 import { uploadFileBuffer } from './google-drive';
 import { logTelegramMessage, upsertCandidateActivity } from '../../../db-pg';
 import { getWhatsappCrmContextForBot } from './amocrm';
+import { runWithIntakeChannelAsync } from './intake-context';
 
 const pausedChats = new Set<string>();
 
@@ -334,13 +335,15 @@ async function handleTextMessage(
 
   let response;
   try {
-    response = await agent.generate(textForAgent, {
-      memory: {
-        thread: threadKey,
-        resource: `whatsapp-user-${threadKey}`,
-      },
-      maxSteps: 10,
-    });
+    response = await runWithIntakeChannelAsync('whatsapp', () =>
+      agent.generate(textForAgent, {
+        memory: {
+          thread: threadKey,
+          resource: `whatsapp-user-${threadKey}`,
+        },
+        maxSteps: 10,
+      }),
+    );
   } catch (err) {
     console.error('[WA] Agent generate failed:', err);
     throw err;

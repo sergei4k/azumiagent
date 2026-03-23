@@ -9,6 +9,7 @@ import {
 import { initDb, saveCandidate } from '../../../db-pg';
 import { getFileUrl } from '../integrations/telegram-client';
 import { fileStoreByPhone } from '../integrations/shared-file-store';
+import { getIntakeChannel } from '../integrations/intake-context';
 
 // Helper to normalize phone numbers for comparison
 function normalizePhone(phone: string): string {
@@ -181,6 +182,7 @@ export const submitCandidateApplicationTool = createTool({
     const videoForAmo = await ensureFileUrl(finalIntroVideoFile, 'video');
 
     const submissionComplete = !!(resumeForAmo && videoForAmo);
+    const sourceChannel = getIntakeChannel() ?? 'telegram';
 
     // Upload to amoCRM with files
     let amoResult;
@@ -192,6 +194,7 @@ export const submitCandidateApplicationTool = createTool({
         submissionComplete,
         resumeFile: resumeForAmo,
         introVideoFile: videoForAmo,
+        sourceChannel,
       });
       console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
     } catch (error) {
@@ -385,11 +388,13 @@ export const attachFilesToExistingLeadTool = createTool({
     const resumeForAmo = await ensureFileUrl(storedFiles.resumeFile, 'resume');
     const videoForAmo = await ensureFileUrl(storedFiles.introVideoFile, 'video');
 
+    const sourceChannel = getIntakeChannel() ?? 'telegram';
     const { attached } = await attachFilesToExistingLead(
       leadId,
       { resumeFile: resumeForAmo, introVideoFile: videoForAmo },
       candidateName,
-      noteText
+      noteText,
+      { sourceChannel },
     );
 
     fileStoreByPhone.delete(normalizedPhone);
@@ -421,6 +426,15 @@ export const addNoteToCandidateLeadTool = createTool({
     const leadId = parseLeadIdFromApplicationId(applicationId);
     if (!leadId) {
       return { success: false, message: `Invalid application ID: ${applicationId}. Expected format AZM-123.` };
+    }
+
+    const sourceChannel = getIntakeChannel() ?? 'telegram';
+    if (sourceChannel === 'whatsapp') {
+      console.log('[WA] add-note-to-candidate-lead skipped — CRM note not created (conversation is in WhatsApp)');
+      return {
+        success: true,
+        message: `WhatsApp: details stay in this chat; no CRM note added for ${applicationId}.`,
+      };
     }
 
     const header = `📝 Обновление от кандидата\n📅 ${new Date().toLocaleString('ru-RU')}\n\n${noteText}\n\n🤖 Источник: Telegram чат-бот`;

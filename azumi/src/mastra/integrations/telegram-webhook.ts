@@ -51,6 +51,7 @@ import { fileStoreByPhone, FileStoreEntry, webUploadsByUserId } from './shared-f
 import { uploadFileFromUrl } from './google-drive';
 import { generateUploadLink } from './file-upload-server';
 import { logTelegramMessage, upsertCandidateActivity } from '../../../db-pg';
+import { runWithIntakeChannelAsync } from './intake-context';
 
 /**
  * Store files by phone number (called when we learn the phone number)
@@ -284,14 +285,16 @@ async function handleTextMessage(
   // Generate response from agent with memory context
   let response;
   try {
-    response = await agent.generate(text, {
-      memory: {
-        thread: `telegram-${userId}`,
-        resource: `telegram-user-${userId}`,
-      },
-      // Ensure agent continues after tool calls to produce a final message
-      maxSteps: 10,
-    });
+    response = await runWithIntakeChannelAsync('telegram', () =>
+      agent.generate(text, {
+        memory: {
+          thread: `telegram-${userId}`,
+          resource: `telegram-user-${userId}`,
+        },
+        // Ensure agent continues after tool calls to produce a final message
+        maxSteps: 10,
+      }),
+    );
   } catch (err) {
     console.error('❌ Agent generate failed:', err);
     throw err;

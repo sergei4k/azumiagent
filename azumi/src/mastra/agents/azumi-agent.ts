@@ -151,7 +151,8 @@ CRITICAL — NEVER RE-ASK INFORMATION THE CANDIDATE ALREADY PROVIDED:
 
 UPDATING EXISTING APPLICATIONS (new files or new info only)
 - When someone who already applied sends NEW FILES (resume, intro video): use attach-files-to-existing-lead. You need applicationId, their phone, and name. On WhatsApp take applicationId from the [WA·CRM] line; on Telegram use lookup-candidate if needed. Files must already be in the chat.
-- When they provide NEW INFO to record (visa, availability, certifications, contact changes): use add-note-to-candidate-lead with applicationId from [WA·CRM] on WhatsApp, or lookup-candidate on Telegram.
+- WhatsApp CRM: do not duplicate the application as long text notes in amoCRM — the WhatsApp thread is the record. Tools still upload files to the lead and set the lead status (e.g. qualified when resume+video are present). add-note-to-candidate-lead does not add CRM notes on WhatsApp; rely on chat.
+- When they provide NEW INFO to record (visa, availability, certifications, contact changes): Telegram — use add-note-to-candidate-lead (lookup-candidate for applicationId if needed). WhatsApp — do not rely on CRM notes; acknowledge in chat; you may still call add-note-to-candidate-lead so the tool returns OK (it will not create a CRM note on WhatsApp).
 - On Telegram only: use lookup-candidate to obtain applicationId for those two tools — not for status questions. On WhatsApp never call lookup-candidate.
 - If they only ask how their application is doing, do not call lookup-candidate; say our team will get back to them soon.
 

@@ -111,6 +111,8 @@ interface CandidateData {
     duration?: number;
   };
   additionalNotes?: string;
+  /** Telegram: full notes on the lead. WhatsApp: upload files + set status only — chat is the record. */
+  sourceChannel?: 'whatsapp' | 'telegram';
 }
 
 /**
@@ -298,6 +300,44 @@ async function getPipelineStatusNames(): Promise<Map<number, string>> {
   }
 }
 
+/** Collect every PHONE custom-field value (mobile/work can be multiple). */
+function collectPhoneStringsFromContact(contact: {
+  custom_fields_values?: Array<{
+    field_code?: string;
+    values?: Array<{ value?: string | number }>;
+  }>;
+}): string[] {
+  const out: string[] = [];
+  for (const field of contact.custom_fields_values || []) {
+    if (field.field_code !== 'PHONE') continue;
+    for (const v of field.values || []) {
+      const raw = v?.value;
+      if (raw == null || raw === '') continue;
+      out.push(String(raw).trim());
+    }
+  }
+  return out;
+}
+
+/**
+ * Match WhatsApp E.164 digits to CRM-stored numbers (often national 10-digit US, extra +1, etc.).
+ */
+function phoneDigitsMatch(searchDigits: string, contactDigits: string): boolean {
+  if (!searchDigits || !contactDigits) return false;
+  if (searchDigits === contactDigits) return true;
+  if (searchDigits.endsWith(contactDigits) || contactDigits.endsWith(searchDigits)) return true;
+  const stripLeadingUS1 = (d: string) =>
+    d.length === 11 && d.startsWith('1') ? d.slice(1) : d;
+  const a = stripLeadingUS1(searchDigits);
+  const b = stripLeadingUS1(contactDigits);
+  if (a === b) return true;
+  if (a.length >= 7 && b.length >= 7 && (a.endsWith(b) || b.endsWith(a))) return true;
+  if (searchDigits.length >= 7 && contactDigits.length >= 7) {
+    if (searchDigits.slice(-7) === contactDigits.slice(-7)) return true;
+  }
+  return false;
+}
+
 /**
  * Search amoCRM for an existing candidate by phone, email, or name.
  * Returns contact info and their linked leads with real pipeline statuses.
@@ -351,18 +391,27 @@ export async function searchCandidateInCRM(params: {
         let cPhone: string | undefined;
         let cEmail: string | undefined;
         for (const field of c.custom_fields_values || []) {
-          if (field.field_code === 'PHONE') cPhone = field.values?.[0]?.value;
+          if (field.field_code === 'PHONE') {
+            const first = field.values?.[0]?.value;
+            if (first != null && first !== '') cPhone = String(first).trim();
+          }
           if (field.field_code === 'EMAIL') cEmail = field.values?.[0]?.value;
         }
 
-        if (params.phone && searchDigits.length >= 7 && cPhone) {
-          const cDigits = normalize(cPhone);
-          if (cDigits.endsWith(searchDigits) || searchDigits.endsWith(cDigits)) {
-            contact = c;
-            contactPhone = cPhone;
-            contactEmail = cEmail;
-            break;
+        const phoneStrings = collectPhoneStringsFromContact(c);
+        if (params.phone && searchDigits.length >= 7 && phoneStrings.length > 0) {
+          let matched = false;
+          for (const ps of phoneStrings) {
+            const cDigits = normalize(ps);
+            if (phoneDigitsMatch(searchDigits, cDigits)) {
+              contact = c;
+              contactPhone = ps;
+              contactEmail = cEmail;
+              matched = true;
+              break;
+            }
           }
+          if (matched) break;
         } else if (params.email && cEmail && cEmail.toLowerCase() === query.toLowerCase()) {
           contact = c;
           contactPhone = cPhone;
@@ -373,6 +422,29 @@ export async function searchCandidateInCRM(params: {
           contactPhone = cPhone;
           contactEmail = cEmail;
           break;
+        }
+      }
+
+      // amoCRM relevance: one hit for a phone query but empty/malformed PHONE fields — still gate on this contact
+      if (
+        !contact &&
+        contacts.length === 1 &&
+        params.phone &&
+        searchDigits.length >= 7
+      ) {
+        const only = contacts[0];
+        const phoneStrings = collectPhoneStringsFromContact(only);
+        if (phoneStrings.length === 0) {
+          console.warn(
+            `🔍 amoCRM: query "${query}" returned 1 contact (id=${only.id}) with no PHONE field values — using amo search relevance match`,
+          );
+          contact = only;
+          let cEmail: string | undefined;
+          for (const field of only.custom_fields_values || []) {
+            if (field.field_code === 'EMAIL') cEmail = field.values?.[0]?.value;
+          }
+          contactPhone = undefined;
+          contactEmail = cEmail;
         }
       }
 
@@ -578,8 +650,9 @@ export async function createCandidateLead(data: CandidateData): Promise<{
   // Build lead name
   const leadName = `Кандидат: ${data.fullName}`;
 
+  const skipCrmNotes = data.sourceChannel === 'whatsapp';
 
-  // Create comprehensive note with all candidate details
+  // Create comprehensive note with all candidate details (Telegram; WhatsApp skips — chat is the record)
   const noteText = `📝 Заявка через чат-бот Azumi
 
 🆔 ID заявки: ${data.applicationId}
@@ -634,16 +707,18 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
 
   const leadId = leadResponse._embedded.leads[0].id;
 
-  // Add note with full details
-  await amoRequest('/leads/notes', 'POST', [
-    {
-      entity_id: leadId,
-      note_type: 'common',
-      params: {
-        text: noteText,
+  // Add note with full details (skip on WhatsApp — messages are already in the chat)
+  if (!skipCrmNotes) {
+    await amoRequest('/leads/notes', 'POST', [
+      {
+        entity_id: leadId,
+        note_type: 'common',
+        params: {
+          text: noteText,
+        },
       },
-    },
-  ]);
+    ]);
+  }
 
   // Upload files as attachments to the lead
   if (data.resumeFile) {
@@ -654,32 +729,34 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
         const fileName = data.resumeFile.fileName || `resume_${data.fullName.replace(/\s+/g, '_')}.pdf`;
         console.log('📤 Uploading resume to amoCRM: %s', fileName);
         await uploadFileToAmoCRM(data.resumeFile.fileUrl, fileName, 'leads', leadId);
-      
-
-      const driveLink = driveViewLink(data.resumeFile.fileUrl);
-      await amoRequest('/leads/notes', 'POST', [
-        {
-          entity_id: leadId,
-          note_type: 'common',
-          params: {
-            text: `📄 Резюме кандидата приложено: ${fileName}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error('Failed to upload resume:', error);
-      const link = driveViewLink(data.resumeFile.fileUrl);
-      await amoRequest('/leads/notes', 'POST', [
-        {
-          entity_id: leadId,
-          note_type: 'common',
-          params: {
-            text: link
-              ? `📄 Резюме кандидата (ссылка):\n${link}`
-              : `📄 Резюме кандидата: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
-          },
-        },
-      ]);
+        const driveLink = driveViewLink(data.resumeFile.fileUrl);
+        if (!skipCrmNotes) {
+          await amoRequest('/leads/notes', 'POST', [
+            {
+              entity_id: leadId,
+              note_type: 'common',
+              params: {
+                text: `📄 Резюме кандидата приложено: ${fileName}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
+              },
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to upload resume:', error);
+        const link = driveViewLink(data.resumeFile.fileUrl);
+        if (!skipCrmNotes) {
+          await amoRequest('/leads/notes', 'POST', [
+            {
+              entity_id: leadId,
+              note_type: 'common',
+              params: {
+                text: link
+                  ? `📄 Резюме кандидата (ссылка):\n${link}`
+                  : `📄 Резюме кандидата: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
+              },
+            },
+          ]);
+        }
       }
     }
   }
@@ -692,34 +769,37 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
         const fileName = data.introVideoFile.fileName || `intro_video_${data.fullName.replace(/\s+/g, '_')}.mp4`;
         console.log('📤 Uploading intro video to amoCRM: %s', fileName);
         await uploadFileToAmoCRM(data.introVideoFile.fileUrl, fileName, 'leads', leadId);
-      
-      const durationInfo = data.introVideoFile.duration
-        ? ` (${Math.floor(data.introVideoFile.duration / 60)}:${(data.introVideoFile.duration % 60).toString().padStart(2, '0')})`
-        : '';
-      const driveLink = driveViewLink(data.introVideoFile.fileUrl);
-      await amoRequest('/leads/notes', 'POST', [
-        {
-          entity_id: leadId,
-          note_type: 'common',
-          params: {
-            text: `🎥 Видео-представление кандидата приложено: ${fileName}${durationInfo}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error('Failed to upload video:', error);
-      const link = driveViewLink(data.introVideoFile.fileUrl);
-      await amoRequest('/leads/notes', 'POST', [
-        {
-          entity_id: leadId,
-          note_type: 'common',
-          params: {
-            text: link
-              ? `🎥 Видео-представление кандидата (ссылка):\n${link}`
-              : `🎥 Видео-представление: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
-          },
-        },
-      ]);
+        const durationInfo = data.introVideoFile.duration
+          ? ` (${Math.floor(data.introVideoFile.duration / 60)}:${(data.introVideoFile.duration % 60).toString().padStart(2, '0')})`
+          : '';
+        const driveLink = driveViewLink(data.introVideoFile.fileUrl);
+        if (!skipCrmNotes) {
+          await amoRequest('/leads/notes', 'POST', [
+            {
+              entity_id: leadId,
+              note_type: 'common',
+              params: {
+                text: `🎥 Видео-представление кандидата приложено: ${fileName}${durationInfo}${driveLink ? `\nGoogle Drive: ${driveLink}` : ''}`,
+              },
+            },
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to upload video:', error);
+        const link = driveViewLink(data.introVideoFile.fileUrl);
+        if (!skipCrmNotes) {
+          await amoRequest('/leads/notes', 'POST', [
+            {
+              entity_id: leadId,
+              note_type: 'common',
+              params: {
+                text: link
+                  ? `🎥 Видео-представление кандидата (ссылка):\n${link}`
+                  : `🎥 Видео-представление: файл получен, но загрузка не удалась. Файл доступен в Google Drive папке.`,
+              },
+            },
+          ]);
+        }
       }
     }
   }
@@ -757,8 +837,25 @@ export async function addNoteToLead(leadId: number, noteText: string): Promise<v
 }
 
 /**
+ * Update lead status within the candidates pipeline (e.g. move to «qualified» when resume+video are on the lead).
+ */
+export async function updateLeadStatusInCandidatesPipeline(leadId: number, statusId: number): Promise<void> {
+  if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
+    throw new Error('amoCRM not configured');
+  }
+  await amoRequest('/leads', 'PATCH', [
+    {
+      id: leadId,
+      pipeline_id: AMOCRM_PIPELINE_CANDIDATES_ID,
+      status_id: statusId,
+    },
+  ]);
+}
+
+/**
  * Attach new files (resume, intro video) to an existing lead and add a note.
  * Use when a returning candidate sends updated documents or new files.
+ * WhatsApp: no CRM text notes (chat is the record); when both resume+video URLs are present, moves lead to qualified status.
  */
 export async function attachFilesToExistingLead(
   leadId: number,
@@ -767,12 +864,14 @@ export async function attachFilesToExistingLead(
     introVideoFile?: AttachFileEntry;
   },
   candidateName: string,
-  noteText?: string
+  noteText?: string,
+  options?: { sourceChannel?: 'whatsapp' | 'telegram' },
 ): Promise<{ attached: string[] }> {
   if (!AMOCRM_SUBDOMAIN || !AMOCRM_ACCESS_TOKEN) {
     throw new Error('amoCRM not configured');
   }
 
+  const skipCrmNotes = options?.sourceChannel === 'whatsapp';
   const attached: string[] = [];
 
   const safeName = candidateName.replace(/\s+/g, '_').slice(0, 50);
@@ -780,22 +879,26 @@ export async function attachFilesToExistingLead(
   async function uploadOne(
     file: AttachFileEntry | undefined,
     label: string,
-    defaultFileName: string
+    defaultFileName: string,
   ): Promise<void> {
     if (!file?.fileUrl) return;
     const fileName = file.fileName || defaultFileName;
     try {
       await uploadFileToAmoCRM(file.fileUrl, fileName, 'leads', leadId);
       attached.push(fileName);
-      const link = driveViewLink(file.fileUrl);
-      await addNoteToLead(
-        leadId,
-        `${label}: ${fileName}${link ? `\nGoogle Drive: ${link}` : ''}`
-      );
+      if (!skipCrmNotes) {
+        const link = driveViewLink(file.fileUrl);
+        await addNoteToLead(
+          leadId,
+          `${label}: ${fileName}${link ? `\nGoogle Drive: ${link}` : ''}`,
+        );
+      }
     } catch (err) {
       console.error(`Failed to upload ${label}:`, err);
-      const link = file.fileUrl;
-      await addNoteToLead(leadId, `${label} (ссылка):\n${link}`);
+      if (!skipCrmNotes) {
+        const link = file.fileUrl;
+        await addNoteToLead(leadId, `${label} (ссылка):\n${link}`);
+      }
       attached.push(fileName);
     }
   }
@@ -804,7 +907,7 @@ export async function attachFilesToExistingLead(
     await uploadOne(
       files.resumeFile,
       '📄 Обновлённое резюме',
-      `resume_update_${safeName}.pdf`
+      `resume_update_${safeName}.pdf`,
     );
   }
 
@@ -815,17 +918,28 @@ export async function attachFilesToExistingLead(
     await uploadOne(
       files.introVideoFile,
       `🎥 Видео-представление${dur}`,
-      `intro_video_${safeName}.mp4`
+      `intro_video_${safeName}.mp4`,
     );
   }
 
-  const header = `📝 Обновление заявки кандидата\n📅 ${new Date().toLocaleString('ru-RU')}\n`;
-  const body = noteText ? `\nНовая информация от кандидата:\n${noteText}\n` : '';
-  const filesList =
-    attached.length > 0
-      ? `\nПрикреплённые файлы: ${attached.join(', ')}`
-      : '';
-  await addNoteToLead(leadId, `${header}${body}${filesList}\n🤖 Источник: Telegram чат-бот`);
+  if (!skipCrmNotes) {
+    const header = `📝 Обновление заявки кандидата\n📅 ${new Date().toLocaleString('ru-RU')}\n`;
+    const body = noteText ? `\nНовая информация от кандидата:\n${noteText}\n` : '';
+    const filesList =
+      attached.length > 0
+        ? `\nПрикреплённые файлы: ${attached.join(', ')}`
+        : '';
+    await addNoteToLead(leadId, `${header}${body}${filesList}\n🤖 Источник: Telegram чат-бот`);
+  } else if (files.resumeFile?.fileUrl && files.introVideoFile?.fileUrl) {
+    try {
+      await updateLeadStatusInCandidatesPipeline(leadId, AMOCRM_STATUS_QUALIFIED_ID);
+      console.log(
+        `[WA] Lead ${leadId} → status ${AMOCRM_STATUS_QUALIFIED_ID} (resume+video on lead; no duplicate CRM notes)`,
+      );
+    } catch (e) {
+      console.error('[WA] Failed to move lead to qualified after attach:', e);
+    }
+  }
 
   return { attached };
 }
