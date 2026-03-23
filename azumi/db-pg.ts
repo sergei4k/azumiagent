@@ -101,6 +101,9 @@ async function ensureMessagesTable(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  try {
+    await pool.query(`ALTER TABLE telegram_messages ADD COLUMN IF NOT EXISTS channel TEXT NOT NULL DEFAULT 'telegram'`);
+  } catch { /* column may already exist */ }
   messagesTableInitialized = true;
 }
 
@@ -109,13 +112,14 @@ export async function logTelegramMessage(params: {
   userId: number;
   sender: 'user' | 'bot';
   text: string;
+  channel?: 'telegram' | 'whatsapp';
 }): Promise<void> {
   try {
     await ensureMessagesTable();
     await pool.query(
-      `INSERT INTO telegram_messages (chat_id, user_id, sender, text)
-       VALUES ($1, $2, $3, $4)`,
-      [params.chatId, params.userId, params.sender, params.text],
+      `INSERT INTO telegram_messages (chat_id, user_id, sender, text, channel)
+       VALUES ($1, $2, $3, $4, $5)`,
+      [params.chatId, params.userId, params.sender, params.text, params.channel ?? 'telegram'],
     );
   } catch (e) {
     console.warn('Failed to log Telegram message to Postgres:', e);
@@ -123,7 +127,7 @@ export async function logTelegramMessage(params: {
 }
 
 export async function getRecentChats(): Promise<
-  { chat_id: number; last_message_at: Date; last_text: string | null; first_name: string | null; message_count: number }[]
+  { chat_id: number; last_message_at: Date; last_text: string | null; first_name: string | null; message_count: number; channel: string }[]
 > {
   try {
     await ensureMessagesTable();
@@ -135,7 +139,8 @@ export async function getRecentChats(): Promise<
         MAX(m.created_at) AS last_message_at,
         (ARRAY_AGG(m.text ORDER BY m.created_at DESC))[1] AS last_text,
         COUNT(*)::int AS message_count,
-        ca.first_name
+        ca.first_name,
+        (ARRAY_AGG(m.channel ORDER BY m.created_at DESC))[1] AS channel
       FROM telegram_messages m
       LEFT JOIN candidate_activity ca ON ca.chat_id = m.chat_id
       GROUP BY m.chat_id, ca.first_name

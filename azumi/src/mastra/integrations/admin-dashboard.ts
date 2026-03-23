@@ -167,6 +167,27 @@ export function getAdminDashboardHtml(): string {
     flex-shrink: 0;
   }
 
+  .channel-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 6px;
+    margin-left: 6px;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  .channel-badge.telegram {
+    background: #1a3a5c;
+    color: #54a8e8;
+  }
+
+  .channel-badge.whatsapp {
+    background: #1a3a28;
+    color: #34d399;
+  }
+
   /* ── Main Panel ── */
   .main {
     flex: 1;
@@ -515,12 +536,15 @@ export function getAdminDashboardHtml(): string {
       const isActive = c.chat_id === activeChatId ? ' active' : '';
       const isPaused = pausedChatIds.has(String(c.chat_id)) ? ' paused' : '';
       const pauseLabel = isPaused ? '⏸' : '';
+      const channel = c.channel || 'telegram';
+      const channelLabel = channel === 'whatsapp' ? 'WA' : 'TG';
       return '<div class="chat-item' + isActive + isPaused + '" onclick="openChat(' + c.chat_id + ', \\'' + escHtml(name) + '\\')">' +
         '<div class="chat-avatar">' + initial + '</div>' +
         '<div class="chat-info">' +
           '<div class="chat-name"><span>' + pauseLabel + ' ' + escHtml(name) + '</span><span class="chat-time">' + time + '</span></div>' +
           '<div class="chat-preview">' + escHtml(preview) + '</div>' +
         '</div>' +
+        '<span class="channel-badge ' + channel + '">' + channelLabel + '</span>' +
         '<span class="chat-badge">' + (c.message_count || '?') + '</span>' +
       '</div>';
     }).join('');

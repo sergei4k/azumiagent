@@ -210,6 +210,7 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
       userId: dbId,
       sender: 'user',
       text: logText,
+      channel: 'whatsapp',
     });
   } catch (e) {
     console.warn('[WA] Failed to log incoming message:', e);
@@ -374,7 +375,7 @@ async function handleTextMessage(
     if (context) context.phoneNumber = phoneNumber;
   }
 
-  logTelegramMessage({ chatId: dbId, userId: dbId, sender: 'bot', text: messageToSend }).catch(
+  logTelegramMessage({ chatId: dbId, userId: dbId, sender: 'bot', text: messageToSend, channel: 'whatsapp' }).catch(
     () => {},
   );
 
