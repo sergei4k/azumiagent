@@ -1,0 +1,3479 @@
+⚠️ AMOCRM_PIPELINE_MAP is not valid JSON, ignoring
+🔍 Fetching amoCRM pipelines and statuses...
+
+📊 Available Pipelines:
+
+  Pipeline ID: 4265398
+  Name: Клиенты РФ
+  Statuses:
+    - Status ID: 39927754 | Name: Неразобранное
+    - Status ID: 39927757 | Name: Новый лид
+    - Status ID: 39927793 | Name: Взят в работу
+    - Status ID: 59029006 | Name: подбор с даты
+    - Status ID: 39927808 | Name: Начали подбор персонала
+    - Status ID: 39927820 | Name: Назначен пробный день
+    - Status ID: 39927829 | Name: Провели пробный день
+    - Status ID: 39927835 | Name: Договор отправлен
+    - Status ID: 39927817 | Name: Дожим
+    - Status ID: 45934270 | Name: Замена
+    - Status ID: 46056682 | Name: Рекомендации
+    - Status ID: 142 | Name: Успешно реализовано
+    - Status ID: 143 | Name: Закрыто и не реализовано
+
+  Pipeline ID: 4263337
+  Name: Иностранный персонал   РФ
+  Statuses:
+    - Status ID: 39913645 | Name: Неразобранное
+    - Status ID: 45910102 | Name: Новые соискатели
+    - Status ID: 74241290 | Name: квалифицирован
+    - Status ID: 47711176 | Name: Поиск Работы-Филиппины
+    - Status ID: 67933738 | Name: кандидаты с визами! ищут работу
+    - Status ID: 59184958 | Name: без проживания-поиск работы
+    - Status ID: 59184962 | Name: с проживанием-поиск работы
+    - Status ID: 50613637 | Name: назначен пробный день
+    - Status ID: 48238174 | Name: Работают от нас филиппины
+    - Status ID: 39913657 | Name: Филиппины
+    - Status ID: 52112596 | Name: турция
+    - Status ID: 54129278 | Name: Дубай
+    - Status ID: 39927931 | Name: Россия
+    - Status ID: 78724118 | Name: Китай
+    - Status ID: 39927934 | Name: Африка
+    - Status ID: 39927937 | Name: Native speaker English
+    - Status ID: 52567471 | Name: Нидерланды
+    - Status ID: 47491606 | Name: Китай
+    - Status ID: 48719257 | Name: French
+    - Status ID: 49743970 | Name: Филиппины Европа
+    - Status ID: 63026114 | Name: США
+    - Status ID: 49841386 | Name: Индия и Шри ланка
+    - Status ID: 83425806 | Name: Проект производство
+    - Status ID: 39927940 | Name: другие
+    - Status ID: 142 | Name: Успешно реализовано
+    - Status ID: 143 | Name: Закрыто и не реализовано
+
+  Pipeline ID: 9081018
+  Name: Клиенты КЗ
+  Statuses:
+    - Status ID: 73084714 | Name: Неразобранное
+    - Status ID: 73084718 | Name: Первичный контакт
+    - Status ID: 73084722 | Name: Переговоры
+    - Status ID: 77473014 | Name: Взят в работу
+    - Status ID: 74991018 | Name: Назначен пробный день
+    - Status ID: 73386230 | Name: Отправили договор на оплату
+    - Status ID: 73776746 | Name: Дожим
+    - Status ID: 73836762 | Name: Замена
+    - Status ID: 75741934 | Name: другие
+    - Status ID: 142 | Name: Успешно реализовано
+    - Status ID: 143 | Name: Закрыто и не реализовано
+
+  Pipeline ID: 9081022
+  Name: Кандидаты
+  Statuses:
+    - Status ID: 73084730 | Name: Неразобранное
+    - Status ID: 73728086 | Name: Новые кандидаты
+    - Status ID: 74242838 | Name: Квалифицирован
+    - Status ID: 73084734 | Name: В поисках работы Алматы
+    - Status ID: 73420662 | Name: В поисках работы Астана
+    - Status ID: 74312958 | Name: назначен пробный день
+    - Status ID: 74334226 | Name: Работают от агентства
+    - Status ID: 76823886 | Name: агенты
+    - Status ID: 78221310 | Name: Шымкент кандидаты
+    - Status ID: 73084738 | Name: Almaty
+    - Status ID: 73871102 | Name: astana
+    - Status ID: 73420682 | Name: Кыргызстан
+    - Status ID: 73420722 | Name: Узбекистан
+    - Status ID: 73084742 | Name: Прибывают в Казахстан
+    - Status ID: 77205126 | Name: Дубай
+    - Status ID: 76901946 | Name: Носители  в Казахстан
+    - Status ID: 76169986 | Name: КЗ русскоязычные кандидаты
+    - Status ID: 83328106 | Name: Семейные пары КЗ
+    - Status ID: 73663234 | Name: welders
+    - Status ID: 142 | Name: Успешно реализовано
+    - Status ID: 143 | Name: Закрыто и не реализовано
+
+  Pipeline ID: 10069342
+  Name: РФ кандидаты русскояз
+  Statuses:
+    - Status ID: 79839014 | Name: Неразобранное
+    - Status ID: 79839018 | Name: Няня грудничок
+    - Status ID: 79839022 | Name: няня
+    - Status ID: 79839026 | Name: домработница
+    - Status ID: 81141838 | Name: Семейные пары
+    - Status ID: 142 | Name: гувернантка
+    - Status ID: 143 | Name: Закрыто и не реализовано
+
+
+📋 Fetching Lead + Contact custom field definitions (IDs, enums)...
+
+📋 Lead custom fields: {
+  "_total_items": 80,
+  "_page": 1,
+  "_page_count": 1,
+  "_links": {
+    "self": {
+      "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields?page=1&limit=250"
+    }
+  },
+  "_embedded": {
+    "custom_fields": [
+      {
+        "id": 433153,
+        "name": "utm_content",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_CONTENT",
+        "sort": 566,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433153?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433155,
+        "name": "utm_medium",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_MEDIUM",
+        "sort": 567,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433155?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433157,
+        "name": "utm_campaign",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_CAMPAIGN",
+        "sort": 568,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433157?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433159,
+        "name": "utm_source",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_SOURCE",
+        "sort": 569,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433159?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433161,
+        "name": "utm_term",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_TERM",
+        "sort": 570,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433161?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433163,
+        "name": "utm_referrer",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "UTM_REFERRER",
+        "sort": 571,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433163?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433165,
+        "name": "roistat",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "ROISTAT",
+        "sort": 572,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433165?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433169,
+        "name": "openstat_service",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "OPENSTAT_SERVICE",
+        "sort": 573,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433169?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433171,
+        "name": "openstat_campaign",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "OPENSTAT_CAMPAIGN",
+        "sort": 574,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433171?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433173,
+        "name": "openstat_ad",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "OPENSTAT_AD",
+        "sort": 575,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433173?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433175,
+        "name": "openstat_source",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "OPENSTAT_SOURCE",
+        "sort": 576,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433175?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433177,
+        "name": "from",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "FROM",
+        "sort": 577,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433177?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433179,
+        "name": "gclientid",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "GCLIENTID",
+        "sort": 578,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433179?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433181,
+        "name": "_ym_uid",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "_YM_UID",
+        "sort": 579,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433181?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433183,
+        "name": "_ym_counter",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "_YM_COUNTER",
+        "sort": 580,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433183?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433185,
+        "name": "gclid",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "GCLID",
+        "sort": 581,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433185?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433187,
+        "name": "yclid",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "YCLID",
+        "sort": 582,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433187?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433189,
+        "name": "fbclid",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "FBCLID",
+        "sort": 583,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/433189?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446311,
+        "name": "Вакансия",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 561,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 220289,
+            "value": "Няня",
+            "sort": 500
+          },
+          {
+            "id": 220291,
+            "value": "Домработница",
+            "sort": 3
+          },
+          {
+            "id": 220293,
+            "value": "Тьютор английского языка",
+            "sort": 4
+          },
+          {
+            "id": 220295,
+            "value": "Повар",
+            "sort": 5
+          },
+          {
+            "id": 253743,
+            "value": "Няня-тьютор английского языка",
+            "sort": 2
+          },
+          {
+            "id": 253745,
+            "value": "Няня-домработница",
+            "sort": 1
+          },
+          {
+            "id": 254379,
+            "value": "Семейная пара",
+            "sort": 6
+          },
+          {
+            "id": 262253,
+            "value": "Другое (указать в комментарии)",
+            "sort": 7
+          }
+        ],
+        "group_id": "leads_99801638441281",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446311?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446313,
+        "name": "Носитель языка",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 508,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 220297,
+            "value": "Английский",
+            "sort": 500
+          },
+          {
+            "id": 220299,
+            "value": "Русский",
+            "sort": 1
+          },
+          {
+            "id": 253909,
+            "value": "Французский",
+            "sort": 2
+          },
+          {
+            "id": 253911,
+            "value": "Итальянский",
+            "sort": 3
+          },
+          {
+            "id": 253913,
+            "value": "Другой вариант",
+            "sort": 4
+          },
+          {
+            "id": 253951,
+            "value": "Китайский",
+            "sort": 5
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446313?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446315,
+        "name": "Город",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 524,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446315?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446317,
+        "name": "Комментарии",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 511,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446317?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446343,
+        "name": "Источник лида",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 560,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 220301,
+            "value": "Сайт",
+            "sort": 500
+          },
+          {
+            "id": 220303,
+            "value": "Instagram",
+            "sort": 1
+          },
+          {
+            "id": 220305,
+            "value": "Facebook",
+            "sort": 2
+          },
+          {
+            "id": 220307,
+            "value": "Рекомендация",
+            "sort": 3
+          },
+          {
+            "id": 220309,
+            "value": "2gis",
+            "sort": 4
+          },
+          {
+            "id": 220311,
+            "value": "Авито",
+            "sort": 5
+          },
+          {
+            "id": 220313,
+            "value": "Повторный клиент",
+            "sort": 6
+          }
+        ],
+        "group_id": "leads_99801638441281",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446343?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446345,
+        "name": "Источник кандидата",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 531,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 220315,
+            "value": "Facebook",
+            "sort": 500
+          },
+          {
+            "id": 220317,
+            "value": "hh.ru",
+            "sort": 1
+          },
+          {
+            "id": 220319,
+            "value": "superjob.ru",
+            "sort": 2
+          },
+          {
+            "id": 220321,
+            "value": "avito.ru",
+            "sort": 3
+          },
+          {
+            "id": 220323,
+            "value": "rabota.ru",
+            "sort": 4
+          },
+          {
+            "id": 220327,
+            "value": "Собственная база",
+            "sort": 5
+          }
+        ],
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446345?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446347,
+        "name": "Ссылка на вакансию",
+        "type": "url",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 530,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446347?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446349,
+        "name": "OneDrive link for client",
+        "type": "url",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 512,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446349?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446351,
+        "name": "Дата интервью",
+        "type": "date",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 522,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446351?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446353,
+        "name": "Дата пробного дня",
+        "type": "date",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 523,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446353?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446355,
+        "name": "Адрес клиента",
+        "type": "smart_address",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 526,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 1,
+            "value": "address_line_1",
+            "sort": 1
+          },
+          {
+            "id": 2,
+            "value": "address_line_2",
+            "sort": 2
+          },
+          {
+            "id": 3,
+            "value": "city",
+            "sort": 3
+          },
+          {
+            "id": 4,
+            "value": "state",
+            "sort": 4
+          },
+          {
+            "id": 5,
+            "value": "zip",
+            "sort": 5
+          },
+          {
+            "id": 6,
+            "value": "country",
+            "sort": 6
+          }
+        ],
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446355?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446357,
+        "name": "Телефон клиента",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 527,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446357?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446407,
+        "name": "Дата выхода",
+        "type": "date",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 533,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_90621620470433",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446407?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446409,
+        "name": "Оплата",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 534,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_90621620470433",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446409?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 446411,
+        "name": "Срок контракта",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 535,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_90621620470433",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/446411?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 462597,
+        "name": "Тип клиента",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 515,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 228829,
+            "value": "Новый",
+            "sort": 500
+          },
+          {
+            "id": 228831,
+            "value": "Повторный",
+            "sort": 1
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/462597?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 466661,
+        "name": "Отказ кандидата",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 529,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 230783,
+            "value": "График работы",
+            "sort": 500
+          },
+          {
+            "id": 230785,
+            "value": "Оплата",
+            "sort": 1
+          },
+          {
+            "id": 230787,
+            "value": "Место работы",
+            "sort": 2
+          },
+          {
+            "id": 230789,
+            "value": "Клиент",
+            "sort": 3
+          },
+          {
+            "id": 230791,
+            "value": "Виза",
+            "sort": 4
+          }
+        ],
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/466661?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 515253,
+        "name": "Проживание",
+        "type": "radiobutton",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 507,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 253795,
+            "value": "Да",
+            "sort": 500
+          },
+          {
+            "id": 253797,
+            "value": "Нет",
+            "sort": 1
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/515253?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 515357,
+        "name": "График работы",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 563,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 253851,
+            "value": "Полная занятость",
+            "sort": 500
+          },
+          {
+            "id": 253853,
+            "value": "Частичная занятость",
+            "sort": 1
+          }
+        ],
+        "group_id": "leads_99801638441281",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/515357?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 515359,
+        "name": "Кол-во часов в смену",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 510,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/515359?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 515461,
+        "name": "Кол-во дней в неделю",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 509,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/515461?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516549,
+        "name": "Вопрос 1",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 541,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516549?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516551,
+        "name": "Вопрос 2",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 543,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516551?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516553,
+        "name": "Вопрос 3",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 545,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516553?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516555,
+        "name": "Вопрос 4",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 547,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516555?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516557,
+        "name": "Вопрос 5",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 549,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516557?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516559,
+        "name": "Вопрос 6",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 551,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516559?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516561,
+        "name": "Вопрос 7",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 553,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516561?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516569,
+        "name": "Вопрос 8",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 555,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516569?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516573,
+        "name": "Вопрос 9",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 557,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516573?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516583,
+        "name": "Имя клиента",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 542,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516583?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516697,
+        "name": "Кто требуется?",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 544,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516697?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516731,
+        "name": "График",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 546,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516731?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516733,
+        "name": "График частичной занятости",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 548,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516733?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516735,
+        "name": "Формат работы",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 550,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516735?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516737,
+        "name": "Место работы",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 552,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516737?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516739,
+        "name": "Город",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 554,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516739?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516741,
+        "name": "Метро",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 556,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516741?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 516743,
+        "name": "Количество детей",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 558,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_87581620808299",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/516743?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 532333,
+        "name": "ga_utm",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "GA_UTM",
+        "sort": 584,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/532333?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 532575,
+        "name": "Комментарий вакансии",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 562,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_99801638441281",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/532575?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 624767,
+        "name": "Желаемый график",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 538,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_37011620655257",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/624767?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 624817,
+        "name": "Требуемый персонал",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 539,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_37011620655257",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/624817?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 975371,
+        "name": "ссылка на документ",
+        "type": "url",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 528,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/975371?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 975431,
+        "name": "Метро клиента",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 525,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": "leads_70451620470423",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/975431?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1027169,
+        "name": "referrer",
+        "type": "tracking_data",
+        "account_id": 29473462,
+        "code": "REFERRER",
+        "sort": 565,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": "statistic",
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1027169?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1049559,
+        "name": "Ссылка на клиента",
+        "type": "url",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 516,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1049559?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1053027,
+        "name": "Рекомендации",
+        "type": "select",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 517,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 633089,
+            "value": "Есть",
+            "sort": 500
+          },
+          {
+            "id": 633091,
+            "value": "Нет",
+            "sort": 1
+          },
+          {
+            "id": 633093,
+            "value": "По телефону",
+            "sort": 2
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1053027?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1057737,
+        "name": "Работодатель",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 518,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1057737?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1066195,
+        "name": "Ссылка персонал",
+        "type": "url",
+        "account_id": 29473462,
+        "code": "ZOOM_LINK",
+        "sort": 506,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1066195?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1066199,
+        "name": "ссылка google клиента",
+        "type": "url",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 519,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1066199?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1067199,
+        "name": "Google Drive old",
+        "type": "url",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 513,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1067199?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069771,
+        "name": "TRANID",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "TRANID",
+        "sort": 505,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069771?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069773,
+        "name": "FORMNAME",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "FORMNAME",
+        "sort": 504,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069773?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069865,
+        "name": "Telegram User ID",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 503,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069865?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069869,
+        "name": "FORMID",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": "FORMID",
+        "sort": 501,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069869?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069871,
+        "name": "REFERER",
+        "type": "url",
+        "account_id": 29473462,
+        "code": "REFERER",
+        "sort": 502,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069871?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069935,
+        "name": "Страна",
+        "type": "select",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 536,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 654821,
+            "value": "Филиппины",
+            "sort": 500
+          },
+          {
+            "id": 654823,
+            "value": "Турция",
+            "sort": 1
+          }
+        ],
+        "group_id": "leads_90621620470433",
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069935?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069937,
+        "name": "Информация о визе",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 520,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1069937?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070675,
+        "name": "Google Drive new",
+        "type": "url",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 514,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1070675?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070769,
+        "name": "Объявление",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1070769?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070771,
+        "name": "URL объявления",
+        "type": "url",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "leads",
+        "tracking_callback": null,
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "chained_lists": null,
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/leads/custom_fields/1070771?page=1&limit=250"
+          }
+        }
+      }
+    ]
+  }
+}
+📋 Contact custom fields: {
+  "_total_items": 34,
+  "_page": 1,
+  "_page_count": 1,
+  "_links": {
+    "self": {
+      "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields?page=1&limit=250"
+    }
+  },
+  "_embedded": {
+    "custom_fields": [
+      {
+        "id": 433143,
+        "name": "Должность",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "POSITION",
+        "sort": 515,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/433143?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433145,
+        "name": "Телефон",
+        "type": "multitext",
+        "account_id": 29473462,
+        "code": "PHONE",
+        "sort": 4,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 214027,
+            "value": "WORK",
+            "sort": 2
+          },
+          {
+            "id": 214029,
+            "value": "WORKDD",
+            "sort": 4
+          },
+          {
+            "id": 214031,
+            "value": "MOB",
+            "sort": 6
+          },
+          {
+            "id": 214033,
+            "value": "FAX",
+            "sort": 8
+          },
+          {
+            "id": 214035,
+            "value": "HOME",
+            "sort": 10
+          },
+          {
+            "id": 214037,
+            "value": "OTHER",
+            "sort": 12
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/433145?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 433147,
+        "name": "Email",
+        "type": "multitext",
+        "account_id": 29473462,
+        "code": "EMAIL",
+        "sort": 6,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 214039,
+            "value": "WORK",
+            "sort": 2
+          },
+          {
+            "id": 214041,
+            "value": "PRIV",
+            "sort": 4
+          },
+          {
+            "id": 214043,
+            "value": "OTHER",
+            "sort": 6
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": false,
+        "is_predefined": true,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/433147?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 463087,
+        "name": "Я.Гражданство",
+        "type": "select",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 516,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 229035,
+            "value": "РФ",
+            "sort": 500
+          },
+          {
+            "id": 229037,
+            "value": "Республика Филипины",
+            "sort": 1
+          },
+          {
+            "id": 229039,
+            "value": "Украина",
+            "sort": 2
+          },
+          {
+            "id": 229041,
+            "value": "Республика Беларусь",
+            "sort": 3
+          },
+          {
+            "id": 253975,
+            "value": "Кыргызская Республика",
+            "sort": 4
+          },
+          {
+            "id": 253977,
+            "value": "Другой вариант",
+            "sort": 5
+          },
+          {
+            "id": 629321,
+            "value": "Африка",
+            "sort": 6
+          },
+          {
+            "id": 629323,
+            "value": "Европа",
+            "sort": 7
+          },
+          {
+            "id": 629325,
+            "value": "Англия",
+            "sort": 8
+          },
+          {
+            "id": 635317,
+            "value": "Шри Ланка, Индонезия",
+            "sort": 9
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/463087?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 463107,
+        "name": "Я.Дата окончания визы",
+        "type": "date",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 517,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/463107?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 463171,
+        "name": "Я.Метро",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 518,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/463171?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 515833,
+        "name": "Я.Условия занятости",
+        "type": "multiselect",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 519,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 254039,
+            "value": "Полная занятость",
+            "sort": 500
+          },
+          {
+            "id": 254041,
+            "value": "Частичная занятость",
+            "sort": 1
+          },
+          {
+            "id": 633259,
+            "value": "Вахта",
+            "sort": 2
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/515833?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 532175,
+        "name": "Пользовательское соглашение",
+        "type": "checkbox",
+        "account_id": 29473462,
+        "code": "USER_AGREEMENT",
+        "sort": 514,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/532175?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 572565,
+        "name": "Я.Какие условия предпочтительны?",
+        "type": "multiselect",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 520,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 284233,
+            "value": "С проживанием",
+            "sort": 500
+          },
+          {
+            "id": 284235,
+            "value": "Без проживания",
+            "sort": 1
+          },
+          {
+            "id": 284237,
+            "value": "Вахта",
+            "sort": 2
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/572565?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 572567,
+        "name": "Какая позиция интересует?",
+        "type": "multiselect",
+        "account_id": 29473462,
+        "code": "",
+        "sort": 510,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 284239,
+            "value": "Няня",
+            "sort": 500
+          },
+          {
+            "id": 284245,
+            "value": "Помощница по хозяйству",
+            "sort": 1
+          },
+          {
+            "id": 616167,
+            "value": "Няня с функцией помощницы по хозяйству",
+            "sort": 2
+          },
+          {
+            "id": 629141,
+            "value": "Няня тьютор",
+            "sort": 3
+          },
+          {
+            "id": 629143,
+            "value": "Тьютор",
+            "sort": 4
+          },
+          {
+            "id": 630119,
+            "value": "Няня к новорожденному",
+            "sort": 8
+          },
+          {
+            "id": 630625,
+            "value": "Семейная пара",
+            "sort": 11
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/572567?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "remind": "never",
+        "id": 1053551,
+        "name": "День рождения",
+        "type": "birthday",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 508,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1053551?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1053559,
+        "name": "Есть ли рекомендации ( можете прикрепить здесь) , есть ли возможность предоставить телефон прежнего работодателя",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 509,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1053559?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1053561,
+        "name": "Какую работу вы рассматриваете?",
+        "type": "select",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 511,
+        "is_api_only": false,
+        "enums": [
+          {
+            "id": 633477,
+            "value": "С проживанием",
+            "sort": 500
+          },
+          {
+            "id": 633479,
+            "value": "Без проживания",
+            "sort": 1
+          },
+          {
+            "id": 633481,
+            "value": "Вахта",
+            "sort": 2
+          },
+          {
+            "id": 633483,
+            "value": "Все варианты",
+            "sort": 3
+          }
+        ],
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1053561?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1053563,
+        "name": "Какую оплату вы рассматриваете?",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 512,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1053563?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1053565,
+        "name": "Ваше гражданство?",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 513,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1053565?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1054601,
+        "name": "TelegramUsername_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 503,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1054601?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1056367,
+        "name": "Адрес клиента",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 504,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1056367?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1065351,
+        "name": "TelegroupId_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 505,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1065351?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1066515,
+        "name": "Work experience",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 506,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1066515?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1066517,
+        "name": "Qualification",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 507,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1066517?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1066859,
+        "name": "Комментарии",
+        "type": "textarea",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 522,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1066859?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1069867,
+        "name": "Telegram User ID",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1069867?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070312,
+        "name": "whatsgroup_WZ",
+        "type": "numeric",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1070312?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070767,
+        "name": "Avito_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1070767?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1070871,
+        "name": "TelegramId_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1070871?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071575,
+        "name": "Телеграм Никнейм (Pact.im)",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "TELEGRAM_NICKNAME",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071575?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071577,
+        "name": "Вконтакте ID (Pact.im)",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "VKONTAKTE_ID",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071577?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071579,
+        "name": "Вконтакте DOMAIN (Pact.im)",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "VKONTAKTE_DOMAIN",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071579?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071605,
+        "name": "Instagram Business (Pact.im)",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "INSTAGRAM_BUSINESS_USERNAME",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071605?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071607,
+        "name": "Телеграм chat_id (Pact.im)",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "TELEGRAM_PERSONAL_CHAT_ID",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071607?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071729,
+        "name": "Telegram ID",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "TGID",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071729?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071731,
+        "name": "Telegram username",
+        "type": "text",
+        "account_id": 29473462,
+        "code": "TGUSERNAME",
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071731?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071747,
+        "name": "WhatsappUsername_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": false,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071747?page=1&limit=250"
+          }
+        }
+      },
+      {
+        "id": 1071749,
+        "name": "WhatsappLid_WZ",
+        "type": "text",
+        "account_id": 29473462,
+        "code": null,
+        "sort": 500,
+        "is_api_only": true,
+        "enums": null,
+        "group_id": null,
+        "required_statuses": [],
+        "is_deletable": true,
+        "is_predefined": false,
+        "entity_type": "contacts",
+        "remind": null,
+        "triggers": [],
+        "currency": null,
+        "hidden_statuses": [],
+        "_links": {
+          "self": {
+            "href": "https://infoazumistaffru.amocrm.ru/api/v4/contacts/custom_fields/1071749?page=1&limit=250"
+          }
+        }
+      }
+    ]
+  }
+}
+
+✅ Done! Use Pipeline ID + Status ID for lead stages; custom field IDs from the JSON above.
+
+Optional .env:
+AMOCRM_PIPELINE_ID=your_pipeline_id
+AMOCRM_STATUS_ID=your_status_id

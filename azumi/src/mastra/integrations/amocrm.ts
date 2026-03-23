@@ -32,6 +32,19 @@ const AMOCRM_PIPELINE_MAP: Record<string, PipelineConfig> = (() => {
   }
 })();
 
+/** Pipeline «Кандидаты» — WhatsApp bot only replies when lead is in STATUS_NEW_CANDIDATES_ID */
+export const AMOCRM_PIPELINE_CANDIDATES_ID = Number(
+  process.env.AMOCRM_PIPELINE_CANDIDATES_ID || 9081022,
+);
+/** Новые кандидаты — bot may chat */
+export const AMOCRM_STATUS_NEW_CANDIDATES_ID = Number(
+  process.env.AMOCRM_STATUS_NEW_CANDIDATES_ID || 73728086,
+);
+/** Квалифицирован — after full application (resume+video); bot stops on WhatsApp */
+export const AMOCRM_STATUS_QUALIFIED_ID = Number(
+  process.env.AMOCRM_STATUS_QUALIFIED_ID || 74242838,
+);
+
 function resolvePipeline(currentLocation?: string): PipelineConfig | undefined {
   if (!currentLocation) return AMOCRM_PIPELINE_DEFAULT;
 
@@ -82,6 +95,8 @@ interface CandidateData {
   preferredArrangement: string;
   willingToRelocate: boolean;
   preferredCountries?: string[];
+  /** True when resume + intro video are present — lead moves to STATUS_QUALIFIED */
+  submissionComplete?: boolean;
   resumeFile?: {
     fileId: string;
     fileName?: string;
@@ -371,7 +386,15 @@ export async function searchCandidateInCRM(params: {
 
       // Fetch full details for each lead (limit to 5 most recent)
       const statusMap = await getPipelineStatusNames();
-      const leads: Array<{ id: number; name: string; status: string; createdAt: string; url: string }> = [];
+      const leads: Array<{
+        id: number;
+        name: string;
+        status: string;
+        status_id: number;
+        pipeline_id: number;
+        createdAt: string;
+        url: string;
+      }> = [];
 
       for (const ref of embeddedLeads.slice(0, 5)) {
         try {
@@ -380,6 +403,8 @@ export async function searchCandidateInCRM(params: {
             id: lead.id,
             name: lead.name || `Lead #${lead.id}`,
             status: statusMap.get(lead.status_id) || `Unknown status (${lead.status_id})`,
+            status_id: lead.status_id,
+            pipeline_id: lead.pipeline_id,
             createdAt: lead.created_at
               ? new Date(lead.created_at * 1000).toISOString()
               : 'unknown',
@@ -411,6 +436,64 @@ export async function searchCandidateInCRM(params: {
 
   console.log(`🔍 amoCRM: no candidate found for: ${queries.join(', ')}`);
   return { found: false, leads: [] };
+}
+
+/**
+ * Single CRM fetch for WhatsApp: bot gate + model preface.
+ * Bot only replies when there is no lead in pipeline AMOCRM_PIPELINE_CANDIDATES_ID,
+ * or the latest lead there is in AMOCRM_STATUS_NEW_CANDIDATES_ID (Новые кандидаты).
+ * After full submit, lead moves to AMOCRM_STATUS_QUALIFIED_ID — bot stops (no reply).
+ */
+export async function getWhatsappCrmContextForBot(phone: string): Promise<{
+  allowBot: boolean;
+  preface: string;
+}> {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length < 7) {
+    return { allowBot: true, preface: '[WA·CRM] number too short to search.' };
+  }
+  const phoneQuery = phone.trim().startsWith('+') ? phone.trim() : `+${digits}`;
+  try {
+    const r = await searchCandidateInCRM({ phone: phoneQuery });
+
+    if (r.found && r.leads?.length) {
+      const inCandidatesPipeline = r.leads.filter((l) => l.pipeline_id === AMOCRM_PIPELINE_CANDIDATES_ID);
+      if (inCandidatesPipeline.length > 0) {
+        inCandidatesPipeline.sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        const latest = inCandidatesPipeline[0];
+        if (latest.status_id !== AMOCRM_STATUS_NEW_CANDIDATES_ID) {
+          console.log(
+            `[WA] Bot gate: block — lead ${latest.id} pipeline ${latest.pipeline_id} status_id=${latest.status_id} (only ${AMOCRM_STATUS_NEW_CANDIDATES_ID} = bot active)`,
+          );
+          return { allowBot: false, preface: '' };
+        }
+      }
+    }
+
+    if (!r.found || !r.contact) {
+      return { allowBot: true, preface: '[WA·CRM] no contact matched this WhatsApp number.' };
+    }
+
+    const pipelineLeads = r.leads.filter((l) => l.pipeline_id === AMOCRM_PIPELINE_CANDIDATES_ID);
+    const sorted = (pipelineLeads.length ? pipelineLeads : [...r.leads]).sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+    const latestLead = sorted[0];
+    const applicationId = latestLead ? `AZM-${latestLead.id}` : `CRM-${r.contact.id}`;
+    console.log(
+      `[WA] CRM pre-search by phone: matched "${r.contact.name}" → ${applicationId} (${r.leads.length} lead(s))`,
+    );
+    const preface =
+      `[WA·CRM] contact "${r.contact.name}", applicationId ${applicationId}. ` +
+      `Server already matched this WhatsApp number — do NOT call lookup-candidate on WhatsApp. ` +
+      `Use applicationId only for attach-files or add-note. Never disclose status or pipeline to the candidate.`;
+    return { allowBot: true, preface };
+  } catch (e) {
+    console.warn('[WA] CRM context failed:', e);
+    return { allowBot: true, preface: '[WA·CRM] search failed or unavailable.' };
+  }
 }
 
 /**
@@ -533,14 +616,15 @@ ${data.additionalNotes ? `\n📝 Дополнительная информаци
     },
   };
 
-  // Set pipeline and status based on candidate's current location
-  const pipelineConfig = resolvePipeline(data.currentLocation);
-  const FALLBACK_PIPELINE: PipelineConfig = { pipeline_id: 9081022, status_id: 74242838 };
-  const pipeline = pipelineConfig ?? FALLBACK_PIPELINE;
-  leadData.pipeline_id = pipeline.pipeline_id;
-  if (pipeline.status_id) {
-    leadData.status_id = pipeline.status_id;
-  }
+  // Кандидаты pipeline: new → STATUS_NEW_CANDIDATES, full submission (resume+video) → STATUS_QUALIFIED
+  const statusForLead = data.submissionComplete
+    ? AMOCRM_STATUS_QUALIFIED_ID
+    : AMOCRM_STATUS_NEW_CANDIDATES_ID;
+  leadData.pipeline_id = AMOCRM_PIPELINE_CANDIDATES_ID;
+  leadData.status_id = statusForLead;
+  console.log(
+    `📍 Lead pipeline ${AMOCRM_PIPELINE_CANDIDATES_ID}, status ${statusForLead} (${data.submissionComplete ? 'qualified / complete' : 'new candidates'})`,
+  );
 
   const leadResponse = await amoRequest('/leads', 'POST', [leadData]);
 
@@ -768,6 +852,23 @@ export async function getPipelines() {
   }
 }
 
+/** Print amoCRM custom_fields API response as one line per field / enum (no JSON dump). */
+function printCustomFieldsList(label: string, res: any): void {
+  const fields = res?._embedded?.custom_fields ?? [];
+  console.log(`\n── ${label} (${fields.length} fields) ──`);
+  for (const f of fields) {
+    const code = f.code ? ` | code: ${f.code}` : '';
+    console.log(`  Field ID: ${f.id} | ${f.name} | type: ${f.type}${code}`);
+
+    const enums = f.enums;
+    if (Array.isArray(enums) && enums.length > 0) {
+      for (const e of enums) {
+        console.log(`    → enum ID: ${e.id} | ${e.value ?? e.name ?? '?'}`);
+      }
+    }
+  }
+}
+
 /**
  * Helper to fetch custom field IDs (run once to see what fields are available)
  */
@@ -775,10 +876,10 @@ export async function getCustomFields() {
   try {
     const leadFields = await amoRequest('/leads/custom_fields', 'GET');
     const contactFields = await amoRequest('/contacts/custom_fields', 'GET');
-    
-    console.log('📋 Lead custom fields:', JSON.stringify(leadFields, null, 2));
-    console.log('📋 Contact custom fields:', JSON.stringify(contactFields, null, 2));
-    
+
+    printCustomFieldsList('LEAD custom fields', leadFields);
+    printCustomFieldsList('CONTACT custom fields', contactFields);
+
     return { leadFields, contactFields };
   } catch (error) {
     console.error('Error fetching custom fields:', error);

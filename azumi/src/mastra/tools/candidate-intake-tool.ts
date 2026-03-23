@@ -180,6 +180,8 @@ export const submitCandidateApplicationTool = createTool({
     const resumeForAmo = await ensureFileUrl(finalResumeFile, 'resume');
     const videoForAmo = await ensureFileUrl(finalIntroVideoFile, 'video');
 
+    const submissionComplete = !!(resumeForAmo && videoForAmo);
+
     // Upload to amoCRM with files
     let amoResult;
     try {
@@ -187,6 +189,7 @@ export const submitCandidateApplicationTool = createTool({
         ...data,
         applicationId,
         preferredContactMethod: 'phone',
+        submissionComplete,
         resumeFile: resumeForAmo,
         introVideoFile: videoForAmo,
       });

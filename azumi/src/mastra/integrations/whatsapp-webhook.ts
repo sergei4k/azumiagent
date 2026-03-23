@@ -17,40 +17,9 @@ import {
 import { fileStoreByPhone, type FileStoreEntry } from './shared-file-store';
 import { uploadFileBuffer } from './google-drive';
 import { logTelegramMessage, upsertCandidateActivity } from '../../../db-pg';
-import { searchCandidateInCRM } from './amocrm';
+import { getWhatsappCrmContextForBot } from './amocrm';
 
 const pausedChats = new Set<string>();
-
-/**
- * Server-side CRM lookup by WhatsApp number (same phone used in CRM).
- * Injected into the agent prompt for tooling (applicationId) — not shown to the user verbatim.
- */
-async function buildWhatsappCrmPreface(phone: string): Promise<string> {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length < 7) {
-    return '[WA·CRM] number too short to search.';
-  }
-  const phoneQuery = phone.trim().startsWith('+') ? phone.trim() : `+${digits}`;
-  try {
-    const r = await searchCandidateInCRM({ phone: phoneQuery });
-    if (!r.found || !r.contact) {
-      return '[WA·CRM] no contact matched this WhatsApp number.';
-    }
-    const latestLead = r.leads[0];
-    const applicationId = latestLead ? `AZM-${latestLead.id}` : `CRM-${r.contact.id}`;
-    console.log(
-      `[WA] CRM pre-search by phone: matched "${r.contact.name}" → ${applicationId} (${r.leads.length} lead(s))`,
-    );
-    return (
-      `[WA·CRM] contact "${r.contact.name}", applicationId ${applicationId}. ` +
-      `Server already matched this WhatsApp number — do NOT call lookup-candidate on WhatsApp. ` +
-      `Use applicationId only for attach-files or add-note. Never disclose status or pipeline to the candidate.`
-    );
-  } catch (e) {
-    console.warn('[WA] CRM pre-search failed:', e);
-    return '[WA·CRM] search failed or unavailable.';
-  }
-}
 
 export function pauseChat(jid: string): void {
   pausedChats.add(jid);
@@ -255,6 +224,12 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
     console.warn('[WA] Failed to log incoming message:', e);
   }
 
+  const crmCtx = await getWhatsappCrmContextForBot(phone);
+  if (!crmCtx.allowBot) {
+    console.log(`🛑 [WA] Bot skipped — CRM lead not in "new candidates" status (${phone})`);
+    return;
+  }
+
   try {
     await sendWhatsAppTyping(jid);
 
@@ -278,12 +253,12 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
       const fileNotice = caption
         ? `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully.] They also wrote: ${caption}`
         : `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully. Do NOT ask for this file again.]`;
-      await handleTextMessage(jid, phone, pushName, fileNotice);
+      await handleTextMessage(jid, phone, pushName, fileNotice, crmCtx.preface);
       return;
     }
 
     if (text) {
-      await handleTextMessage(jid, phone, pushName, text);
+      await handleTextMessage(jid, phone, pushName, text, crmCtx.preface);
     }
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : String(error);
@@ -305,6 +280,7 @@ async function handleTextMessage(
   phone: string,
   pushName: string,
   text: string,
+  crmPreface: string,
 ): Promise<void> {
   const context = userContexts.get(jid);
   const dbId = phoneToDbId(phone);
@@ -323,7 +299,6 @@ async function handleTextMessage(
 
   const agent = mastra.getAgent('azumiAgent');
 
-  const crmPreface = await buildWhatsappCrmPreface(phone);
   const textForAgent = `${crmPreface}\n\n---\nCandidate message:\n${text}`;
 
   let response;

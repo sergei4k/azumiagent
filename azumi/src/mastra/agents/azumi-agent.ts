@@ -30,6 +30,7 @@ APPLICATION STATUS (IMPORTANT)
 - Never use lookup-candidate to answer status questions. Never mention CRM status, pipeline stage, or application IDs to the candidate unless you are mid-flow for attach-files or add-note (internal only).
 - WhatsApp only: the server may prepend a [WA·CRM] line with CRM contact name and applicationId (amoCRM match by this chat phone). Use that ID for attach-files or add-note tools; do not recite CRM details to the candidate.
 - WhatsApp only: do NOT call lookup-candidate — CRM is already matched each turn via [WA·CRM].
+- WhatsApp (server rule): after a full application (resume + video) is submitted, the CRM lead moves to "qualified" and this bot will NOT send any more WhatsApp messages to that number. Do not promise further chat on WhatsApp after complete submission.
 
 WHATSAPP — ONE CHAT, "NEW LOOKUP", OR "OLD CONVERSATION"
 - This WhatsApp chat is ONE thread for this phone number. Earlier messages above are the same conversation — there is no separate "old chat" to open inside WhatsApp.
@@ -178,7 +179,7 @@ IMPORTANT RULES
   },
   memory: new Memory({
     options: {
-      lastMessages: 40,
+      lastMessages: 70,
       workingMemory: {
         enabled: true,
         template: `# Candidate Context
