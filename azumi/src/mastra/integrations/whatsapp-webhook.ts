@@ -2,6 +2,11 @@
  * WhatsApp Message Handler
  * Processes incoming WhatsApp messages via Baileys and routes them to the Azumi agent.
  * Mirrors the Telegram webhook handler logic.
+ *
+ * Terminology:
+ * - `jid` / full JID — WhatsApp chat address (e.g. `...@s.whatsapp.net`, `...@lid`). Not a phone number.
+ * - `jidUserPart` / `jidLocal` — substring before `@`; may be phone-like, LID, or other — never assume E.164.
+ * - `phoneDigits` — digits only when resolved as a real phone for CRM (`resolvePhoneDigitsForCrm`).
  */
 
 import type { proto } from '@whiskeysockets/baileys';
@@ -11,7 +16,9 @@ import {
   sendLongWhatsAppMessage,
   sendWhatsAppTyping,
   downloadWhatsAppMedia,
-  phoneFromJid,
+  jidUserPart,
+  resolvePhoneDigitsForCrm,
+  waThreadKey,
 } from './whatsapp-client';
 
 import { fileStoreByPhone, type FileStoreEntry } from './shared-file-store';
@@ -55,7 +62,8 @@ const userContexts: Map<
   }
 > = new Map();
 
-function storeFilesByPhone(phone: string, jid: string): void {
+/** @param contactKey E.164-like string from user message or context — not a raw JID. */
+function storeFilesByPhone(contactKey: string, jid: string): void {
   const context = userContexts.get(jid);
   if (!context || context.pendingFiles.length === 0) return;
 
@@ -82,9 +90,9 @@ function storeFilesByPhone(phone: string, jid: string): void {
   }
 
   if (files.resumeFile || files.introVideoFile) {
-    const normalizedPhone = phone.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
+    const normalizedPhone = contactKey.replace(/[\s\-\(\)\.]/g, '').replace(/^00/, '+');
     fileStoreByPhone.set(normalizedPhone, files);
-    console.log(`📎 [WA] Stored files for phone ${normalizedPhone}:`, {
+    console.log(`📎 [WA] Stored files for contact key ${normalizedPhone}:`, {
       hasResume: !!files.resumeFile,
       hasVideo: !!files.introVideoFile,
     });
@@ -170,10 +178,23 @@ function extractFileInfo(msg: proto.IWebMessageInfo): {
   return null;
 }
 
-/** Convert a WhatsApp phone string to a numeric DB id (last 15 digits). */
-function phoneToDbId(phone: string): number {
-  const digits = phone.replace(/\D/g, '');
+/** Map E.164 digit string (no +) to numeric chat id for Postgres — not a JID. */
+function e164DigitsToDbId(digitsString: string): number {
+  const digits = digitsString.replace(/\D/g, '');
   return parseInt(digits.slice(-15), 10) || 0;
+}
+
+/** Opaque chat id when we have no E.164 phone (e.g. @lid-only). Uses JID local part digits or hash — not a phone. */
+function jidToDbId(jid: string): number {
+  const user = jidUserPart(jid).replace(/\D/g, '');
+  if (user.length >= 7) return parseInt(user.slice(-15), 10) || hashJidToPositiveInt(jid);
+  return hashJidToPositiveInt(jid);
+}
+
+function hashJidToPositiveInt(jid: string): number {
+  let h = 0;
+  for (let i = 0; i < jid.length; i++) h = (Math.imul(31, h) + jid.charCodeAt(i)) | 0;
+  return Math.abs(h);
 }
 
 /**
@@ -183,17 +204,25 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
   const jid = msg.key.remoteJid;
   if (!jid || jid === 'status@broadcast') return;
 
-  const phone = phoneFromJid(jid);
-  const pushName = msg.pushName || phone;
-  const dbId = phoneToDbId(phone);
+  const phoneDigits = resolvePhoneDigitsForCrm(jid, msg.key);
+  const jidLocal = jidUserPart(jid);
+  if (phoneDigits) {
+    console.log(`[WA] CRM phone (E.164 digits): ${phoneDigits}`);
+  } else {
+    console.log(
+      `[WA] No CRM phone for this chat — jid local part is not E.164 (e.g. @lid). jid=${jid} local=${jidLocal}`,
+    );
+  }
+  const pushName = msg.pushName || (phoneDigits ? `+${phoneDigits}` : jidLocal);
+  const dbId = phoneDigits ? e164DigitsToDbId(phoneDigits) : jidToDbId(jid);
   const text = extractText(msg);
 
   if (pausedChats.has(jid)) {
-    console.log(`⏸️ [WA] Skipping (paused): ${pushName} (${phone}): ${text || '[file]'}`);
+    console.log(`⏸️ [WA] Skipping (paused): ${pushName} (${phoneDigits ?? `jid:${jidLocal}`}): ${text || '[file]'}`);
     return;
   }
 
-  console.log(`📩 [WA] Message from ${pushName} (${phone}): ${text || '[file]'}`);
+  console.log(`📩 [WA] Message from ${pushName} (${phoneDigits ? `crm:${phoneDigits}` : `jid:${jidLocal}`}): ${text || '[file]'}`);
 
   try {
     const logText =
@@ -214,7 +243,7 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
       channel: 'whatsapp',
     });
 
-    const displayName = (msg.pushName || '').trim() || phone;
+    const displayName = (msg.pushName || '').trim() || (phoneDigits ? `+${phoneDigits}` : jidLocal);
     await upsertCandidateActivity({
       chatId: dbId,
       userId: dbId,
@@ -224,9 +253,9 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
     console.warn('[WA] Failed to log incoming message:', e);
   }
 
-  const crmCtx = await getWhatsappCrmContextForBot(phone);
+  const crmCtx = await getWhatsappCrmContextForBot(phoneDigits);
   if (!crmCtx.allowBot) {
-    console.log(`🛑 [WA] Bot skipped — CRM lead not in "new candidates" status (${phone})`);
+    console.log(`🛑 [WA] Bot skipped — CRM lead not in "new candidates" status (${phoneDigits ?? jid})`);
     return;
   }
 
@@ -242,7 +271,7 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
 
     const fileInfo = extractFileInfo(msg);
     if (fileInfo) {
-      await handleFileUpload(jid, phone, msg, fileInfo);
+      await handleFileUpload(jid, phoneDigits, msg, fileInfo);
       const fileLabel =
         fileInfo.type === 'video'
           ? 'intro video'
@@ -253,16 +282,16 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
       const fileNotice = caption
         ? `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully.] They also wrote: ${caption}`
         : `[Candidate just sent their ${fileLabel}${fileInfo.fileName ? ` (${fileInfo.fileName})` : ''} and it has been received successfully. Do NOT ask for this file again.]`;
-      await handleTextMessage(jid, phone, pushName, fileNotice, crmCtx.preface);
+      await handleTextMessage(jid, phoneDigits, pushName, fileNotice, crmCtx.preface);
       return;
     }
 
     if (text) {
-      await handleTextMessage(jid, phone, pushName, text, crmCtx.preface);
+      await handleTextMessage(jid, phoneDigits, pushName, text, crmCtx.preface);
     }
   } catch (error) {
     const errMessage = error instanceof Error ? error.message : String(error);
-    console.error(`[WA] Error handling message from ${phone}:`, errMessage);
+    console.error(`[WA] Error handling message from ${phoneDigits ?? jid}:`, errMessage);
 
     try {
       await sendWhatsAppMessage(
@@ -277,20 +306,22 @@ export async function handleWhatsAppMessage(msg: proto.IWebMessageInfo): Promise
 
 async function handleTextMessage(
   jid: string,
-  phone: string,
+  phoneDigits: string | null,
   pushName: string,
   text: string,
   crmPreface: string,
 ): Promise<void> {
   const context = userContexts.get(jid);
-  const dbId = phoneToDbId(phone);
+  const dbId = phoneDigits ? e164DigitsToDbId(phoneDigits) : jidToDbId(jid);
+  const threadKey = waThreadKey(jid, phoneDigits);
 
   if (context?.pendingFiles?.length) {
     const phoneFromMsg = extractPhoneFromMessage(text);
-    const phoneToUse = phoneFromMsg ?? context.phoneNumber ?? `+${phone}`;
+    const phoneToUse =
+      phoneFromMsg ?? context.phoneNumber ?? (phoneDigits ? `+${phoneDigits}` : null);
     if (phoneToUse) {
       console.log(
-        '[WA] Pre-storing %d pending file(s) by phone before agent runs',
+        '[WA] Pre-storing %d pending file(s) by contact key before agent runs',
         context.pendingFiles.length,
       );
       storeFilesByPhone(phoneToUse, jid);
@@ -305,8 +336,8 @@ async function handleTextMessage(
   try {
     response = await agent.generate(textForAgent, {
       memory: {
-        thread: `whatsapp-${phone}`,
-        resource: `whatsapp-user-${phone}`,
+        thread: threadKey,
+        resource: `whatsapp-user-${threadKey}`,
       },
       maxSteps: 10,
     });
@@ -396,12 +427,12 @@ async function handleTextMessage(
     () => {},
   );
 
-  console.log(`📤 [WA] Sent response to ${pushName} (${phone})`);
+  console.log(`📤 [WA] Sent response to ${pushName} (${phoneDigits ? `crm:${phoneDigits}` : `jid:${jidUserPart(jid)}`})`);
 }
 
 async function handleFileUpload(
   jid: string,
-  phone: string,
+  phoneDigits: string | null,
   msg: proto.IWebMessageInfo,
   fileInfo: {
     type: 'document' | 'video' | 'photo';
@@ -433,7 +464,7 @@ async function handleFileUpload(
         : 'resume.pdf');
   const driveResult = await uploadFileBuffer(
     buffer,
-    `wa-${phone}-${driveName}`,
+    `wa-${phoneDigits ?? `jid-${jidUserPart(jid)}`}-${driveName}`,
     fileInfo.fileType,
   );
 

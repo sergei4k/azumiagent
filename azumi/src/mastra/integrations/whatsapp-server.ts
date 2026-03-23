@@ -105,6 +105,7 @@ app.get('/admin/wa-status', (_req, res) => {
   res.json({ state, connected, qrPending });
 });
 
+// chatId: dashboard stores numeric id (from DB) or JID local part; append domain for Baileys (not amoCRM phone search).
 app.post('/admin/chats/:chatId/pause', (req, res) => {
   const chatId = req.params.chatId;
   const jid = chatId.includes('@') ? chatId : chatId + '@s.whatsapp.net';

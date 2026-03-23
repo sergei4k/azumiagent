@@ -216,7 +216,50 @@ export async function downloadWhatsAppMedia(
   }
 }
 
-/** Extract phone number from WhatsApp JID (e.g. "77081234567@s.whatsapp.net" → "77081234567") */
-export function phoneFromJid(jid: string): string {
+/**
+ * Local part of a WhatsApp JID (before @), e.g. `7700...@s.whatsapp.net` → `7700...`.
+ * This may be a phone-like id, LID, or other identifier — do not assume it is an E.164 phone.
+ * @see resolvePhoneDigitsForCrm for CRM-safe phone digits only.
+ */
+export function jidUserPart(jid: string): string {
   return jid.replace(/@.*$/, '');
+}
+
+
+/** WhatsApp user id for @s.whatsapp.net is digits only; E.164 allows up to 15 (without +). */
+function isLikelyPhoneDigits(user: string): boolean {
+  return /^\d{7,15}$/.test(user);
+}
+
+/**
+ * Extract phone digits from a JID string only when it is a known phone-based domain.
+ * Returns null for @lid and other non-phone JIDs — do not send the user part to CRM as a phone.
+ */
+export function extractPhoneDigitsFromJid(jid: string): string | null {
+  if (!jid || jid.includes('@lid')) return null;
+  if (jid.includes('@s.whatsapp.net') || jid.includes('@c.us')) {
+    const user = jidUserPart(jid);
+    return isLikelyPhoneDigits(user) ? user : null;
+  }
+  return null;
+}
+
+/**
+ * E.164 digits for amoCRM / tools, or null if this chat has no resolvable phone (e.g. only @lid).
+ * Uses remoteJidAlt / senderPn when Baileys provides a real @s.whatsapp.net address.
+ */
+export function resolvePhoneDigitsForCrm(
+  remoteJid: string,
+  key?: proto.IMessageKey | null,
+): string | null {
+  const k = key as Record<string, unknown> | undefined;
+  const tryJid = (j: unknown): string | null => (typeof j === 'string' ? extractPhoneDigitsFromJid(j) : null);
+  return tryJid(k?.remoteJidAlt) ?? tryJid(k?.senderPn) ?? extractPhoneDigitsFromJid(remoteJid);
+}
+
+/** Stable Mastra thread id: phone when known, else opaque key from full JID (never treat lid digits as phone). */
+export function waThreadKey(jid: string, phoneDigits: string | null): string {
+  if (phoneDigits) return `whatsapp-${phoneDigits}`;
+  const safe = Buffer.from(jid, 'utf8').toString('base64url').replace(/=+$/, '');
+  return `whatsapp-jid-${safe}`;
 }

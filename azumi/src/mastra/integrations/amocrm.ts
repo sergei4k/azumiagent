@@ -444,15 +444,19 @@ export async function searchCandidateInCRM(params: {
  * or the latest lead there is in AMOCRM_STATUS_NEW_CANDIDATES_ID (Новые кандидаты).
  * After full submit, lead moves to AMOCRM_STATUS_QUALIFIED_ID — bot stops (no reply).
  */
-export async function getWhatsappCrmContextForBot(phone: string): Promise<{
+export async function getWhatsappCrmContextForBot(phoneDigits: string | null): Promise<{
   allowBot: boolean;
   preface: string;
 }> {
-  const digits = phone.replace(/\D/g, '');
-  if (digits.length < 7) {
-    return { allowBot: true, preface: '[WA·CRM] number too short to search.' };
+  if (!phoneDigits || phoneDigits.replace(/\D/g, '').length < 7) {
+    return {
+      allowBot: true,
+      preface:
+        '[WA·CRM] No phone number resolved for this chat (e.g. @lid only). CRM search skipped — do not treat JID as phone.',
+    };
   }
-  const phoneQuery = phone.trim().startsWith('+') ? phone.trim() : `+${digits}`;
+  const digits = phoneDigits.replace(/\D/g, '');
+  const phoneQuery = phoneDigits.trim().startsWith('+') ? phoneDigits.trim() : `+${digits}`;
   try {
     const r = await searchCandidateInCRM({ phone: phoneQuery });
 
