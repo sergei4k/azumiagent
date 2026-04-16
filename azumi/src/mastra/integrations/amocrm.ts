@@ -111,6 +111,11 @@ interface CandidateData {
     duration?: number;
   };
   additionalNotes?: string;
+  languages?: string;
+  timeInCurrentCountry?: string;
+  workedWithAgencies?: boolean;
+  doingTryouts?: boolean;
+  currentlyWorking?: boolean;
   /** Telegram: full notes on the lead. WhatsApp: upload files + set status only — chat is the record. */
   sourceChannel?: 'whatsapp' | 'telegram';
 }
@@ -358,6 +363,8 @@ export async function searchCandidateInCRM(params: {
     id: number;
     name: string;
     status: string;
+    status_id: number;
+    pipeline_id: number;
     createdAt: string;
     url: string;
   }>;
@@ -678,6 +685,12 @@ ${data.introVideoFile ? `• Видео: ${data.introVideoFile.fileName || 'пр
 • Готов к переезду: ${data.willingToRelocate ? 'Да' : 'Нет'}
 ${data.preferredCountries?.length ? `• Предпочтительные страны: ${data.preferredCountries.join(', ')}` : ''}
 
+🌍 Опыт и статус:
+${data.languages ? `• Языки: ${data.languages}` : ''}
+${data.timeInCurrentCountry ? `• Время в текущей стране: ${data.timeInCurrentCountry}` : ''}
+${data.workedWithAgencies !== undefined ? `• Работал с другими агентствами: ${data.workedWithAgencies ? 'Да' : 'Нет'}` : ''}
+${data.doingTryouts !== undefined ? `• Сейчас на пробном периоде: ${data.doingTryouts ? 'Да' : 'Нет'}` : ''}
+${data.currentlyWorking !== undefined ? `• Работает где-то ещё: ${data.currentlyWorking ? 'Да' : 'Нет'}` : ''}
 
 ${data.additionalNotes ? `\n📝 Дополнительная информация:\n${data.additionalNotes}` : ''}
 

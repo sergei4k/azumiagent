@@ -98,7 +98,7 @@ export const submitCandidateApplicationTool = createTool({
     dateOfBirth: z.string().optional().describe('Date of birth (optional)'),
     
   
-    
+
     // Availability & Preferences
     availableFrom: z.string().describe('When candidate can start working'),
     preferredArrangement: z.enum(['live-in', 'live-out', 'flexible']).describe('Preferred living arrangement'),
@@ -125,6 +125,11 @@ export const submitCandidateApplicationTool = createTool({
     
     // Additional
     hasValidPassport: z.boolean().describe('Whether candidate has a valid passport'),
+    languages: z.string().optional().describe('Languages spoken and fluency levels (e.g. "English B2, Russian native, Tagalog native")'),
+    timeInCurrentCountry: z.string().optional().describe('How long the candidate has been in their current country (e.g. "2 years", "6 months")'),
+    workedWithAgencies: z.boolean().optional().describe('Whether the candidate has worked with other recruitment agencies before'),
+    doingTryouts: z.boolean().optional().describe('Whether the candidate is currently doing tryouts with a family'),
+    currentlyWorking: z.boolean().optional().describe('Whether the candidate is currently working somewhere else'),
     additionalNotes: z.string().optional().describe('Any additional information from the conversation'),
   }),
   outputSchema: z.object({
@@ -184,19 +189,46 @@ export const submitCandidateApplicationTool = createTool({
     const submissionComplete = !!(resumeForAmo && videoForAmo);
     const sourceChannel = getIntakeChannel() ?? 'telegram';
 
-    // Upload to amoCRM with files
+    // Upload to amoCRM with files — for WhatsApp check for an existing lead first to avoid duplicates
     let amoResult;
     try {
-      amoResult = await createCandidateLead({
-        ...data,
-        applicationId,
-        preferredContactMethod: 'phone',
-        submissionComplete,
-        resumeFile: resumeForAmo,
-        introVideoFile: videoForAmo,
-        sourceChannel,
-      });
-      console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
+      if (sourceChannel === 'whatsapp') {
+        const existing = await searchCandidateInCRM({ phone: data.phone });
+        if (existing.found && existing.leads.length > 0) {
+          const leadId = existing.leads[0].id;
+          console.log(`♻️ [WA] Existing CRM lead ${leadId} found for ${data.phone} — attaching files instead of creating duplicate`);
+          await attachFilesToExistingLead(
+            leadId,
+            { resumeFile: resumeForAmo, introVideoFile: videoForAmo },
+            data.fullName,
+            undefined,
+            { sourceChannel: 'whatsapp' },
+          );
+          amoResult = { leadUrl: `https://crm.amocrm.ru/leads/detail/${leadId}`, leadId, contactId: existing.contact!.id };
+        } else {
+          amoResult = await createCandidateLead({
+            ...data,
+            applicationId,
+            preferredContactMethod: 'phone',
+            submissionComplete,
+            resumeFile: resumeForAmo,
+            introVideoFile: videoForAmo,
+            sourceChannel,
+          });
+          console.log('✅ [WA] New candidate lead created in amoCRM:', amoResult.leadUrl);
+        }
+      } else {
+        amoResult = await createCandidateLead({
+          ...data,
+          applicationId,
+          preferredContactMethod: 'phone',
+          submissionComplete,
+          resumeFile: resumeForAmo,
+          introVideoFile: videoForAmo,
+          sourceChannel,
+        });
+        console.log('✅ Candidate uploaded to amoCRM:', amoResult.leadUrl);
+      }
     } catch (error) {
       console.error('❌ Failed to upload to amoCRM:', error);
     }

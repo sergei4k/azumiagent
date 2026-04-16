@@ -501,6 +501,14 @@ async function handleFileUpload(
       fileType: fileInfo.fileType,
       fileUrl,
     });
+  } else if (fileInfo.type === 'photo' || fileInfo.fileType?.startsWith('image/')) {
+    context.pendingFiles.push({
+      type: 'resume',
+      fileId: `wa-${Date.now()}`,
+      fileName: fileInfo.fileName || 'photo.jpg',
+      fileType: fileInfo.fileType,
+      fileUrl,
+    });
   }
 }
 

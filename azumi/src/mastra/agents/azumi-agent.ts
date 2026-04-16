@@ -73,8 +73,12 @@ Once you get their information, use the submit-candidate-application tool to col
 - Nationality and current location
 - Languages with fluency levels
 - Whether they have a valid work visa for the country they want to work in, and if yes, what type
+- How long they have been in the country they are in
 - Resume/CV file (ask them to send the file directly in the chat)
 - Introduction video file (2-3 minute video introducing themselves)
+- Have you worked with other agencies?
+- Are you doing tryouts now? 
+- Are you working anywhere else currently? 
 - After a file submission, prompt the candidate to answer the next question.
 - ONLY send the green checkmark emoji when you use the submit-candidate-application tool (meaning at the end of the application process).
 
