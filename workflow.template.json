@@ -1,0 +1,2959 @@
+{
+  "updatedAt": "2026-07-31T03:04:35.799Z",
+  "createdAt": "2026-06-09T09:40:08.045Z",
+  "name": "ai-recruitment-automation-template",
+  "description": null,
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_WEBHOOK_PATH",
+        "options": {}
+      },
+      "id": "c78297e7-ffc7-44c2-a799-f29f0cb36d80",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -2064,
+        832
+      ],
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"ALLOWED_PIPELINES\": [\n    111111,\n    222222\n  ],\n  \"ALLOWED_STATUSES_NEW\": [\n    333333,\n    444444\n  ],\n  \"QUALIFIED_STATUS_ID\": 555555,\n  \"QUALIFIED_STATUS_BY_PIPELINE\": {\n    \"111111\": 555555,\n    \"222222\": 666666\n  },\n  \"BOT_OFF_FIELD_ID\": 777777,\n  \"CLIENT_GOOGLE_LINK_FIELD_ID\": 888888,\n  \"ACCOUNT_ID_AMOCRM\": 999999,\n  \"VACANCY_LINKS_RU\": \"https://example.com/vacancies-ru\",\n  \"VACANCY_LINKS_EN\": \"https://example.com/vacancies-en\",\n  \"LLM_PROVIDER\": \"YOUR_LLM_PROVIDER\",\n  \"COUNTRY_BY_PIPELINE\": {\n    \"111111\": \"KZ\",\n    \"222222\": \"RU\"\n  }\n}",
+        "options": {}
+      },
+      "id": "YOUR_NUMERIC_ID-455c-40d4-80f9-e86a80c5f140",
+      "name": "Constants",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1840,
+        832
+      ],
+      "notes": "Phase 3.2: настраиваемые константы (whitelist воронок/статусов + ID полей + vacancy ссылки). Расширяемо без правки кода."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $('Webhook').item.json.body['message[add][0][author][type]'] }}",
+              "rightValue": "user",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a1584a65-e01a-4a17-92b6-6a5e38efb1bc",
+      "name": "IF skip false",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1616,
+        832
+      ],
+      "notes": "TRUE branch (skip=false) -> continue. FALSE branch (skip=true) -> respond 200 OK silently."
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Webhook').item.json.body['account[_links][self]'] }}/api/v4/leads/{{ $('Webhook').item.json.body['message[add][0][element_id]'] }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6e9fbc3d-3804-48ce-bf66-4aaa9eae6f19",
+      "name": "GET lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -1392,
+        832
+      ],
+      "notes": "GET lead from AmoCRM to read pipeline_id, status_id, custom_fields_values (Bot_n8n_OFF). Pattern VIKTOR get_entity."
+    },
+    {
+      "parameters": {
+        "jsCode": "// 4 filters: pipeline whitelist + status whitelist + Bot_n8n_OFF check + NOT /start command\nconst raw = $input.first().json;\n// AmoCRM returns lead wrapped in \"data\" string — unwrap\nconst lead = raw.data ? JSON.parse(raw.data) : raw;\nconst constants = $('Constants').first().json;\nconst webhookBody = $('Webhook').first().json.body;\n\nconst pipelineId = lead.pipeline_id;\nconst statusId = lead.status_id;\n\nconst botOff = (lead.custom_fields_values || []).find(\n  f => f.field_id === constants.BOT_OFF_FIELD_ID\n)?.values?.[0]?.value === true;\n\nconst pipelineOK = (constants.ALLOWED_PIPELINES || []).includes(pipelineId);\nconst statusOK = (constants.ALLOWED_STATUSES_NEW || []).includes(statusId);\nconst botOK = !botOff;\n\n// Phase 3.9.7: ignore /start — это команда Telegram, не контент\nconst text = (webhookBody['message[add][0][text]'] || '').trim();\nconst isStartCommand = text === '/start' || text.startsWith('/start ') || text.startsWith('/start@');\nconst notStartOK = !isStartCommand;\n\nconst allow = pipelineOK && statusOK && botOK && notStartOK;\n\nreturn [{\n  json: {\n    allow,\n    lead,\n    constants,\n    webhook_body: webhookBody,\n    pipeline_id: pipelineId,\n    status_id: statusId,\n    bot_off: botOff,\n    is_start_command: isStartCommand,\n    reason: allow ? 'ok' : `pipelineOK=${pipelineOK} statusOK=${statusOK} botOK=${botOK} notStartOK=${notStartOK}`\n  }\n}];"
+      },
+      "id": "b679f76c-582b-4407-8ee7-f4c63ae75167",
+      "name": "3 filters check",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1168,
+        832
+      ],
+      "notes": "3 filters AND: pipeline_id in ALLOWED_PIPELINES (YOUR_NUMERIC_ID) AND status_id in ALLOWED_STATUSES_NEW (YOUR_NUMERIC_ID) AND Bot_n8n_OFF (YOUR_NUMERIC_ID) != true"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.allow }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "YOUR_NUMERIC_ID-91a2-491a-b078-c6431e44ea29",
+      "name": "IF allow",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -944,
+        832
+      ],
+      "notes": "TRUE branch (allow=true) -> continue to GET history. FALSE branch (allow=false) -> respond 200 OK silently (filter rejected)."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Context v3.2: абсолютная память из Supabase + state + prompt_for_agent (Колобок паттерн: префиксы ТОЛЬКО при наличии контекста)\nconst chatHistoryItems = $('Load Chat History').all();\nconst sessionItems = $('Load Session').all();\nconst rawLead = $('GET lead').first().json;\nconst lead = rawLead.data ? JSON.parse(rawLead.data) : rawLead;\nconst constants = $('Constants').first().json;\nconst pipeline_id = lead.pipeline_id;\nconst pipeline_country = (constants.COUNTRY_BY_PIPELINE || {})[String(pipeline_id)] || 'UNKNOWN';\nconst body = $('Webhook').first().json.body;\n\nconst leadId = body['message[add][0][element_id]'] || body['message[add][0][entity_id]'] || '';\nconst chatId = body['message[add][0][chat_id]'] || '';\nconst talkId = body['message[add][0][talk_id]'] || '';\nconst contactId = body['message[add][0][contact_id]'] || '';\nconst contactName = body['message[add][0][author][name]'] || 'Candidate';\nconst accountUrl = body['account[_links][self]'] || '';\nconst accountId = body['account[id]'] || '';\nconst text = body['message[add][0][text]'] || '';\nconst origin = body['message[add][0][origin]'] || '';\n\n// Attachments\nconst attachments = [];\nconst attUrl0 = body['message[add][0][attachments][0][url]'] || body['message[add][0][attachment][link]'];\nconst attType0 = body['message[add][0][attachments][0][type]'] || body['message[add][0][attachment][type]'];\nif (attUrl0) attachments.push({ url: attUrl0, type: attType0 || '' });\nfor (let i = 1; i < 10; i++) {\n  const url = body[`message[add][0][attachments][${i}][url]`];\n  const type = body[`message[add][0][attachments][${i}][type]`];\n  if (!url) break;\n  attachments.push({ url, type });\n}\n\n// HISTORY из Supabase chat_logs\nconst history = chatHistoryItems\n  .filter(item => item.json && item.json.id)\n  .map(item => ({\n    role: item.json.role,\n    content: item.json.content || '',\n    language: item.json.language || null,\n    timestamp: item.json.created_at\n  }))\n  .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));\n\n// STATE из chat_sessions\nconst sessionRow = sessionItems.length > 0 && sessionItems[0].json && sessionItems[0].json.lead_id\n  ? sessionItems[0].json : null;\n\nconst state = sessionRow ? {\n  language: sessionRow.language || null,\n  scenario: sessionRow.scenario || null,\n  in_kazakhstan: sessionRow.in_kazakhstan,\n  last_step: sessionRow.last_step || 'start',\n  current_country: sessionRow.current_country || null,\n  current_city: sessionRow.current_city || null,\n  interested_vacancy: sessionRow.interested_vacancy || null,\n  first_name: sessionRow.first_name || null,\n  internal_full_name: sessionRow.internal_full_name || null,\n  client_folder_link: sessionRow.client_folder_link || null,\n  documents_received: sessionRow.documents_received || [],\n  transition_to_qualified: sessionRow.transition_to_qualified || false,\n  english_level_observed: sessionRow.english_level_observed || null\n} : {\n  language: null, scenario: null, in_kazakhstan: null, last_step: 'start',\n  current_country: null, current_city: null, interested_vacancy: null,\n  first_name: null, internal_full_name: null, client_folder_link: null,\n  documents_received: [], transition_to_qualified: false, english_level_observed: null\n};\n\nstate.documents_pending = ['cv', 'video', 'recommendations', 'police_clearance', 'medical_book']\n  .filter(d => !state.documents_received.includes(d));\n\n// ПРОМПТ ДЛЯ АГЕНТА — КОЛОБОК ПАТТЕРН:\n// Префиксы [PREVIOUS]/[STATE]/[NEW MESSAGE]/[ATTACHMENTS] ДОБАВЛЯЮТСЯ ТОЛЬКО при наличии контекста.\n// Если это первое сообщение (пустая история, нет session, нет attachments) — отдаём ГОЛЫЙ current_message.\n// Это предотвращает игнорирование systemMessage и examples блоков.\nconst hasContext = history.length > 0 || sessionRow !== null;\nconst hasAttachments = attachments.length > 0;\n\nlet prompt_for_agent;\nif (!hasContext && !hasAttachments) {\n  // Первое сообщение — голый текст (как в exec 7889 правильно работало)\n  prompt_for_agent = text || '[no text — attachment only]';\n} else {\n  // Есть контекст — формируем структуру\n  const promptParts = [];\n  \n  if (history.length > 0) {\n    const historyText = history.map(h => {\n      const role = h.role === 'user' ? 'Candidate' : 'Bot';\n      return `${role}: ${h.content}`;\n    }).join('\\n');\n    promptParts.push(`[PREVIOUS CONVERSATION — ${history.length} messages, use for context, do NOT repeat questions already asked]\\n${historyText}`);\n  }\n  \n  if (sessionRow) {\n    const stateLines = [];\n    if (state.language) stateLines.push(`Language: ${state.language}`);\n    if (state.scenario) stateLines.push(`Scenario: ${state.scenario}`);\n    if (state.in_kazakhstan !== null) stateLines.push(`In Kazakhstan: ${state.in_kazakhstan}`);\n    if (state.last_step) stateLines.push(`Last completed step: ${state.last_step}`);\n    if (state.current_country) stateLines.push(`Current country: ${state.current_country}`);\n    if (state.current_city) stateLines.push(`Current city: ${state.current_city}`);\n    if (state.interested_vacancy) stateLines.push(`Interested vacancy: ${state.interested_vacancy}`);\n    if (state.first_name) stateLines.push(`Candidate first name: ${state.first_name}`);\n    if (state.documents_received.length) stateLines.push(`Documents received: ${state.documents_received.join(', ')}`);\n    if (stateLines.length) promptParts.push(`[STATE — результаты предыдущих выяснений]\\n${stateLines.join('\\n')}`);\n  }\n  \n  promptParts.push(`[NEW MESSAGE FROM CANDIDATE]\\n${text || '[no text — attachment only]'}`);\n  \n  if (hasAttachments) {\n    promptParts.push(`[ATTACHMENTS]\\n${attachments.map(a => `- ${a.type}: ${a.url}`).join('\\n')}`);\n  }\n  \n  prompt_for_agent = promptParts.join('\\n\\n');\n}\n\nreturn [{\n  json: {\n    lead_id: leadId,\n    pipeline_id,\n    pipeline_country,\n    chat_id: chatId,\n    talk_id: talkId,\n    contact_id: contactId,\n    contact_name: contactName,\n    account_url: accountUrl,\n    account_id: accountId,\n    current_message: text,\n    attachments,\n    has_voice: attachments.some(a => /audio|voice/.test(a.type || '')),\n    has_video: attachments.some(a => (a.type || '').startsWith('video')),\n    has_document: attachments.some(a => /pdf|doc|docx|file/i.test(a.type || '')),\n      has_image: attachments.some(a => /picture|image|jpe?g|png|webp|gif|tiff/i.test(a.type || '')),\n    history,\n    state,\n    constants,\n    prompt_for_agent\n  }\n}];"
+      },
+      "id": "36647eba-6fda-43ba-b881-ae8d0efb91da",
+      "name": "Build Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        832
+      ],
+      "notes": "Build Context for AI Agent: history (50 messages) + state from [MAIN] note + current_message + attachments info. TODO Phase 3.3 — parse state from notes."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Mapping v3.3: 4 fallback для client_google_link\n// Phase 3.9.11 Fix: + 4-й fallback = Drive create folder (video) из video ветки.\n// Решает: видео первым → создаётся папка в video пути → её URL должен попасть в PATCH lead + [КЛИЕНТСКАЯ ССЫЛКА].\nconst raw = $input.first().json;\nconst aiOutput = raw.output || raw;\nconst context = $('Build Context').first().json;\nconst constants = context.constants;\n\n// --- documents_received hardening ---\nconst priorDocs = Array.isArray($('Refresh Context').first().json.state?.documents_received)\n  ? $('Refresh Context').first().json.state.documents_received : [];\nconst docsSet = new Set(priorDocs);\n// hard signals — these branches only run when the doc actually arrived\ntry { const s = $('Set CV result').all();  if (s.length && s[0].json && s[0].json.cv_client_link)  docsSet.add('cv');    } catch(e){}\ntry { const s = $('Set Video merge').all(); if (s.length && s[0].json && s[0].json.video_uploaded) docsSet.add('video'); } catch(e){}\n// agent-asserted — recommendations / police_clearance / medical_book\nconst aiDocs = Array.isArray(aiOutput.state_documents_received) ? aiOutput.state_documents_received : [];\naiDocs.forEach(d => { if (d) docsSet.add(String(d)); });\nconst documents_received_final = [...docsSet];\n\n// 1. Set CV result (PDF путь, только в этой execution)\nlet cv_link_from_set = null;\ntry {\n  const setCV = $('Set CV result').all();\n  if (setCV.length > 0 && setCV[0].json && setCV[0].json.cv_client_link) {\n    cv_link_from_set = setCV[0].json.cv_client_link;\n  }\n} catch (e) {\n  cv_link_from_set = null;\n}\n\n// 2. AI output\nconst ai_link = aiOutput.state_client_folder_link || null;\n\n// 3. state из Supabase chat_sessions (персистентно между execution)\nconst state_link = context.state?.client_folder_link || null;\n\n// 4. Drive create folder (video) — video ветка создала папку сейчас\n//    только в этой execution + только когда видео пришло ПЕРВЫМ (без PDF)\nlet video_folder_link = null;\ntry {\n  const driveCreateVideo = $('Drive create folder (video)').all();\n  if (driveCreateVideo.length > 0 && driveCreateVideo[0].json && driveCreateVideo[0].json.id) {\n    video_folder_link = `https://drive.google.com/drive/folders/${driveCreateVideo[0].json.id}`;\n  }\n} catch (e) {\n  video_folder_link = null;\n}\n\nconst client_google_link_final = cv_link_from_set || ai_link || state_link || video_folder_link || null;\n\nreturn [{\n  json: {\n    lead_id: context.lead_id,\n    account_url: context.account_url,\n    current_message: context.current_message || '',\n    attachments: context.attachments || [],\n    main_note_text: aiOutput.main_note_text || '',\n    summary_note_text: aiOutput.summary_note_text || '',\n    transition_to_qualified: aiOutput.transition_to_qualified === true,\n    qualified_status_id: (constants.QUALIFIED_STATUS_BY_PIPELINE || {})[String($('Build Context').first().json.pipeline_id)] || constants.QUALIFIED_STATUS_ID,\n    new_lead_name: aiOutput.state_first_name || null,\n    client_google_link: client_google_link_final,\n    client_google_link_field_id: constants.CLIENT_GOOGLE_LINK_FIELD_ID,\n    chat_id: context.chat_id,\n    talk_id: context.talk_id,\n    contact_id: context.contact_id,\n    account_id: context.account_id,\n    account_id_amocrm: constants.ACCOUNT_ID_AMOCRM,\n    reply_text: aiOutput.reply_text || 'OK',\n    reply_language: aiOutput.reply_language || 'EN',\n    english_level_observed: aiOutput.english_level_observed || '',\n    state_language: aiOutput.state_language || aiOutput.reply_language || 'EN',\n    state_scenario: aiOutput.state_scenario || '',\n    state_in_kazakhstan: aiOutput.state_in_kazakhstan,\n    state_last_step: aiOutput.state_last_step || 'start',\n    state_current_country: aiOutput.state_current_country || '',\n    state_current_city: aiOutput.state_current_city || '',\n    state_interested_vacancy: aiOutput.state_interested_vacancy || '',\n    state_first_name: aiOutput.state_first_name || '',\n    state_client_folder_link: client_google_link_final || '', \n    state_documents_received: documents_received_final\n  }\n}];"
+      },
+      "id": "4d129058-8219-4d3f-ad6e-ddb6b61e44da",
+      "name": "Mapping",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5440,
+        944
+      ],
+      "notes": "Mapping for parallel branches. Phase 3.3 will add transition_to_qualified double-check."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.account_url }}/ajax/v1/chats/session",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "request[chats][session][action]",
+              "value": "create"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "3b8d207f-228b-43d6-b18d-bf8cb4602399",
+      "name": "Get amochat session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5664,
+        720
+      ],
+      "notes": "Branch 2 (main reply): Get amochat session token (pattern VIKTOR-amoCRM Get amo token). Returns response.chats.session.access_token + account.id + user.name/avatar."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://amojo.amocrm.ru/v1/chats/{{ $json.response.chats.session.account.id }}/{{ $('Mapping').item.json.chat_id }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Requested-With",
+              "value": "XMLHttpRequest"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/x-www-form-urlencoded"
+            },
+            {
+              "name": "X-Auth-Token",
+              "value": "={{ $json.response.chats.session.access_token }}"
+            },
+            {
+              "name": "chatId",
+              "value": "={{ $('Mapping').item.json.chat_id }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "silent",
+              "value": "false"
+            },
+            {
+              "name": "priority",
+              "value": "low"
+            },
+            {
+              "name": "crm_entity[id]",
+              "value": "={{ $('Webhook').item.json.body['message[add][0][entity_id]'] }}"
+            },
+            {
+              "name": "crm_entity[type]",
+              "value": "={{ $('Webhook').item.json.body['message[add][0][element_type]'] }}"
+            },
+            {
+              "name": "persona_name",
+              "value": "={{ $json.response.chats.session.user.name }}"
+            },
+            {
+              "name": "persona_avatar",
+              "value": "={{ $json.response.chats.session.user.avatar }}"
+            },
+            {
+              "name": "text",
+              "value": "={{ $('Mapping').item.json.reply_text }}"
+            },
+            {
+              "name": "recipient_id",
+              "value": "={{ $('Webhook').item.json.body['message[add][0][author][id]'] }}"
+            },
+            {
+              "name": "group_id"
+            },
+            {
+              "name": "crm_dialog_id",
+              "value": "={{ $('Webhook').item.json.body['message[add][0][talk_id]'] }}"
+            },
+            {
+              "name": "crm_contact_id",
+              "value": "={{ $('Webhook').item.json.body['message[add][0][contact_id]'] }}"
+            },
+            {
+              "name": "crm_account_id",
+              "value": "={{ $('Webhook').item.json.body['account[id]'] }}"
+            },
+            {
+              "name": "skip_link_shortener",
+              "value": "false"
+            }
+          ]
+        },
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "id": "340c7618-6ffb-47df-8793-054204bf484a",
+      "name": "Send message via AmoChats",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5888,
+        720
+      ],
+      "notes": "Branch 2 (main reply): Send message to amojo.amocrm.ru → AmoCRM → Pact → messenger candidate. Pattern VIKTOR-amoCRM Send message to amo (15 body parameters)."
+    },
+    {
+      "parameters": {
+        "content": "# filipino-bot — диалог с кандидаткой\n\nОбрабатывает сообщения кандидаток-нянь из AmoCRM. Собирает резюме, видео, отвечает по сценарию, обновляет карточку сделки, переводит в Квалифицированные когда всё собрано.\n\nПамять — Supabase. Анкета кандидата — в примечаниях AmoCRM. CV и видео — в Google Drive.",
+        "height": 1472,
+        "width": 4944
+      },
+      "id": "07a8278d-1c55-4bd7-afb6-8ff7fad56a1d",
+      "name": "Описание workflow",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -736,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 1. Приём сообщения\n\n**Webhook** — принимает сообщение из AmoCRM.\n**Constants** — задаёт настройки бота.\n**IF skip false** — пропускает только сообщения от кандидатки (игнорирует ответы менеджера).",
+        "height": 344,
+        "width": 560,
+        "color": 6
+      },
+      "id": "3bb2e2a7-6e9e-4c9b-a243-a8d543a12bad",
+      "name": "Block 1: Entry + Constants + Parser",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -2080,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 2. Проверки доступа\n\n**GET lead** — тянет сделку из AmoCRM.\n**3 filters check** — проверяет воронку, этап и выключатель бота.\n**IF allow** — если всё ок, продолжает; иначе бот молчит.",
+        "height": 344,
+        "width": 544,
+        "color": 5
+      },
+      "id": "4065f58e-9981-4ffd-a65c-bc2b353a4002",
+      "name": "Block 2: 3 filters + Bot_n8n_OFF",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 3. Память (абсоленая)\n\n**Load Chat History** — берёт историю диалога из Supabase.\n**Load Session** — берёт состояние сделки (язык, сценарий, шаг).\n**Wait For Data** — ждёт оба запроса.\n**Build Context** — собирает контекст для AI.",
+        "height": 496,
+        "width": 620,
+        "color": 6
+      },
+      "id": "f5c80624-2e65-4632-b930-4197edd2059c",
+      "name": "Block 3: Memory (50 history)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -752,
+        592
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 8. AI-агент\n\n**Intake Agent** — главный мозг бота. Читает историю и состояние, решает что ответить и как обновить сделку. Пишет ответ + данные для примечаний.\n\n**Sonnet 4.6** — основная модель.\n**Fallback gpt-4.1** — запасная.\n**Think** — инструмент размышления.\n**Output Parser** + **gpt-4.1** — проверяют валидность JSON.\n\n**Mapping** — раскладывает ответ AI по веткам.",
+        "height": 680,
+        "width": 920,
+        "color": 3
+      },
+      "id": "d2d11a20-247f-47ea-8270-a64375473e64",
+      "name": "Block 4: AI Agent + Mapping",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4432,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 9. Ответ кандидатке\n\n**Get amochat session** — получает токен сессии AmoChats.\n**Send message via AmoChats** — отправляет ответ кандидатке в тот же мессенджер.",
+        "height": 348,
+        "width": 1164,
+        "color": 4
+      },
+      "id": "ffe4ea4f-3a8f-42df-89a2-e7149309aeac",
+      "name": "Block 5: AmoChats reply",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5312,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Refresh Context').first().json.prompt_for_agent }}",
+        "hasOutputParser": true,
+        "needsFallback": true,
+        "options": {
+          "systemMessage": "<role>\nТы — AI-агент рекрутингового агентства Example Recruitment Agency. Твои задачи:\n1. Общаться с кандидатом по выбранному сценарию\n2. Формировать [MAIN] note (обновляемое) + [SUMMARY] note (краткие выводы) для AmoCRM\n3. Решать когда переводить сделку в этап Квалифицирован\n</role>\n\n<style>\nКоротко, по делу, с уважением.\n\nОБЯЗАТЕЛЬНО:\n- Первое сообщение — ВСЕГДА начинай с приветствия (Hello! / Здравствуйте!)\n- Принимая документ — короткое \"Thanks\" / \"Спасибо\"\n- Просьба — с \"please\" / \"пожалуйста\" (но не в каждом сообщении)\n- 1-2 коротких вопроса в одном сообщении\n- ≤ 200 символов в reply_text (исключение — первое сообщение с vacancy-ссылками)\n- БЕЗ эмодзи (если кандидат сам не пишет с эмодзи)\n\nЗАПРЕЩЕНО:\n- Длинные вежливые формулировки (\"Уважаемый/ая\", \"Просим Вас\", \"Помогите нам понять\")\n- Объяснять зачем нужна информация / процесс работы агентства\n- Извиняться за вопросы или задержки\n- Длинные вводные конструкции и абзацы\n- Перегружать дополнительной информацией\n</style>\n\n<pin_language priority=\"absolute\">\nЯзык диалога ФИКСИРУЕТСЯ по первому сообщению кандидата:\n- Кириллица (русский, казахский) → state.language = RU\n- Латиница (английский) → state.language = EN\n\nЕсли state.language уже установлен — НИКОГДА не переключай. Документы на другом языке (например русский CV от EN-кандидата) — это для менеджера, НЕ сигнал смены языка.\n\nПример (критично):\n- Кандидат: \"Hello, I'm looking for a nanny job\" → state.language=EN\n- Бот отвечает на EN\n- Кандидат присылает русское резюме (наш pipeline переводит → для менеджера)\n- Бот ПРОДОЛЖАЕТ на EN: \"Got it, thanks. Where are you now? Country and city?\"\n- ❌ НЕЛЬЗЯ: \"Спасибо за резюме. Где вы сейчас?\" — критическая ошибка.\n</pin_language>\n\n<absolute_rules>\n1. Работай только в рамках выбранного сценария. Ничего сверх.\n2. Первым делом запроси CV + видео (ТЗ §7). Без них квалификация невозможна.\n3. CV получен → СНАЧАЛА проверь is_outdated. Устарело → попроси свежее.\n4. По рекомендациям ВСЕГДА уточняй: \"От прошлых работодателей? Подлинные?\"\n5. Возвращай ТОЛЬКО валидный JSON по схеме output_format (плоский, 17 полей).\n6. НЕ выдумывай контакты, адреса, цены — нет такой информации.\n7. main_note_text ВСЕГДА полный (все секции), даже если изменился один блок — это перезапись.\n</absolute_rules>\n\n<pipeline_override priority=\"high\">\nThe [PIPELINE] marker sets country context from the WhatsApp number used — a reliable signal that OVERRIDES all text-based scenario guessing, regardless of language:\n- [PIPELINE] Kazakhstan → in-Kazakhstan scenarios (en_kz / ru_kz / en_outside) by language and location, as before.\n- [PIPELINE] Russia + candidate writes EN → ru_en_relocate (relocating TO RUSSIA: ask when coming to Russia, tickets).\n- [PIPELINE] Russia + candidate writes RU → ru_local (already in Russia, staying: NO relocation questions).\nWhen a [PIPELINE] Russia marker is present, NEVER use ru_kz, en_kz, or en_outside.\n</pipeline_override>\n\n<applicant_eligibility priority=\"high\">\nNever reject, discourage, or stop an application based on the candidate’s current country or city, as we are an international agency. Applicants from any country are eligible. Ask only about plans to relocate to the destination country for the selected pipeline.\n</applicant_eligibility>\n\n<en_scenario_selection>\nКогда state.language == EN И state.in_kazakhstan == null:\n- Используй ТОЛЬКО общие EN-вопросы (vacancy + CV+video, затем \"Country and city now?\")\n- НЕ применяй en_kz блок (passport/visa/arrival/live-in)\n- НЕ применяй en_outside блок (plans to come/tickets/payer)\n\nПосле ответа кандидатки на местоположение:\n- Город в Казахстане (Almaty/Astana/Shymkent/Atyrau/Karaganda/...) → state.in_kazakhstan=true → en_kz\n- Страна вне Казахстана (Philippines/UAE/Saudi/...) → state.in_kazakhstan=false → en_outside\n</en_scenario_selection>\n\n<scenario name=\"ru_kz\">\nПРИМЕНЯЕТСЯ ЕСЛИ: state.language == RU.\n\nПЕРВОЕ СООБЩЕНИЕ: vacancy https://example.com/vacancies + запрос CV+видео.\n\nПОРЯДОК ВОПРОСОВ (после CV+видео):\n1. CV актуальность (если устарело — попросить новое)\n2. Страна и город (last_step=request_country_city)\n3. Какая работа интересует (last_step=request_job)\n4. Рекомендации — подлинные от прошлых работодателей (last_step=request_recommendations)\n5. Справка о несудимости (last_step=request_police_clearance)\n6. Медкнижка (last_step=request_medical)\n7. Другие документы (last_step=request_other_documents)\n8. Всё собрано → transition_to_qualified=true + generate_summary(include_visa=false)\n\n<forbidden_questions>\nВ RU/KZ НИКОГДА не задавай: про визу, паспорт, билеты, опыт в других странах.\n</forbidden_questions>\n</scenario>\n\n<scenario name=\"en_kz\">\nAPPLIES IF: state.language == EN AND state.in_kazakhstan == true.\n\nFIRST MESSAGE: vacancies https://example.com/vacancies AND https://example.com/vacancies + request CV+video.\n\nORDER (after CV+video):\n1. CV freshness (if outdated — ask updated)\n2. Country + city (last_step=request_country_city)\n3. What job needed (last_step=request_job)\n4. EN+KZ extended block:\n   a. Is your passport with you? (request_passport)\n   b. Do you have a visa? Till when valid? (request_visa)\n   c. When did you come to Kazakhstan? (request_arrival_date)\n   d. Experience working in other countries? (request_experience)\n   e. What schedule are you looking for? (request_schedule)\n   f. Live-in or live-out? (request_live_in)\n5. References (genuine from previous employers)\n6. Police clearance\n7. Medical book\n8. Other documents\n9. All collected → transition_to_qualified=true + generate_summary(include_visa=true)\n\n<forbidden_questions>\nNEVER in EN+KZ: working with other agencies / tryouts / working somewhere / experience in Kazakhstan.\n</forbidden_questions>\n</scenario>\n\n\n\n<scenario name=\"en_outside\">\nAPPLIES IF: state.language == EN AND state.in_kazakhstan == false.\n\nFIRST MESSAGE: same vacancy links as en_kz + CV+video request.\n\nORDER:\n1. CV freshness\n2. Country and city now?\n3. What job do you need?\n4. Position: Nanny / Tutor / Housemaid / Nanny-Housemaid / School job\n5. When do you plan to come to Kazakhstan? (request_plans)\n6. IF plans_to_come == true:\n   a. Do you already have tickets? (request_tickets)\n   b. Will you pay for tickets yourself? (request_ticket_payer)\n7. References (genuine)\n8. Police clearance\n9. Medical book\n10. All collected → transition_to_qualified=true + generate_summary(include_visa=false)\n\n<forbidden_questions>\nNEVER in EN+OUTSIDE: passport / visa / visa validity / arrival date / other agencies / tryouts / working somewhere / experience in Kazakhstan / experience in other countries / schedule / live-in-out.\n</forbidden_questions>\n</scenario>\n\n<scenario name=\"ru_en_relocate\">\nAPPLIES IF: [PIPELINE] Russia marker present AND candidate writes in EN (Latin script).\nCONTEXT: candidate is relocating TO RUSSIA for work. Destination = Russia (NOT Kazakhstan).\n\nFIRST MESSAGE: vacancy https://example.com/vacancies + request CV+video.\n\nORDER (after CV+video):\n1. CV freshness (if outdated — ask updated)\n2. Country and city now? (last_step=request_country_city)\n3. What job are you looking for? (last_step=request_job)\n4. When do you plan to come to Russia? (last_step=request_plans)\n5. IF plans_to_come == true:\n   a. Do you already have tickets? (last_step=request_tickets)\n   b. Will you pay for tickets yourself? (last_step=request_ticket_payer)\n6. References — genuine, from previous employers? (last_step=request_recommendations)\n7. Police clearance (last_step=request_police_clearance)\n8. Medical book (last_step=request_medical)\n9. Other documents (last_step=request_other_documents)\n10. All collected → transition_to_qualified=true + generate_summary(include_visa=false)\n\n<forbidden_questions>\nNEVER: relocation to Kazakhstan (destination is RUSSIA), KZ visa, KZ arrival. Do not confuse the destination — this pipeline relocates to Russia.\n</forbidden_questions>\n</scenario>\n\n<scenario name=\"ru_local\">\nAPPLIES IF: [PIPELINE] Russia marker present AND candidate writes in RU (Cyrillic script).\nCONTEXT: candidate is already in Russia and staying. NO relocation.\n\nFIRST MESSAGE: vacancy https://example.com/vacancies + request CV+video.\n\nORDER (after CV+video):\n1. CV freshness (if outdated — ask updated)\n2. City in Russia? (country already known — Russia) (last_step=request_country_city)\n3. What job are you looking for? (last_step=request_job)\n4. References — genuine, from previous employers? (last_step=request_recommendations)\n5. Police clearance (last_step=request_police_clearance)\n6. Medical book (last_step=request_medical)\n7. Other documents (last_step=request_other_documents)\n8. All collected → transition_to_qualified=true + generate_summary(include_visa=false)\n\n<forbidden_questions>\nNEVER in ru_local: relocation, moving, tickets, who pays, when coming — candidate already lives in Russia. No visa/passport/arrival questions.\n</forbidden_questions>\n</scenario>\n\n\n<recommendations_emphasis>\nВСЕГДА акцентируй подлинность рекомендаций.\nRU: \"Есть рекомендации от прошлых работодателей? Реальные? Можем связаться?\"\nEN: \"Have references from previous employers? Genuine ones?\"\nВ [DOCUMENTS]:Recommendations: Original received / Not provided / Needs verification.\n</recommendations_emphasis>\n\n<resume_after_pause>\nЕсли state.last_step != null/start И в [MAIN] уже есть данные — значит был Bot_n8n_OFF и менеджер вмешался.\n1. Продолжай с last_step + 1.\n2. НЕ повторяй уже отвеченные вопросы.\n3. НЕ здоровайся повторно если приветствие уже было.\n4. Учти ответы кандидата на ручные вопросы менеджера.\n</resume_after_pause>\n\n<english_level_evaluation>\nТОЛЬКО для EN. После 5+ сообщений оцени уровень в english_level_observed:\n- A1-A2 (Базовый)\n- B1 (Средний)\n- B2 (Хороший)\n- C1-C2 (Свободный)\nДля RU/KZ → english_level_observed = \"\" (в [SUMMARY] \"Нет видео\").\n</english_level_evaluation>\n\n<task_main_note>\nВСЕГДА полный текст [MAIN]:\n\n[ОСНОВНАЯ ИНФОРМАЦИЯ]\nLanguage: {state.language}\nCurrent country: {state.current_country или Unknown}\nCurrent city: {state.current_city или Unknown}\nInterested vacancy: {state.interested_vacancy или Unknown}\nPosition: {Nanny / Housemaid / Tutor / Nanny-Housemaid / School job / Other}\nStatus in Kazakhstan: {In Kazakhstan / Outside Kazakhstan}\nInternal full name: {state.internal_full_name или Unknown}\n\n{ТОЛЬКО если scenario == en_kz:}\n[EN — IN KAZAKHSTAN]\nPassport on hand: {Yes / No / Unknown}\nVisa: {Yes / No / Unknown}\nVisa valid till: {дата / Unknown}\nArrival to Kazakhstan: {дата / Unknown}\nExperience in other countries: {описание / None}\nPreferred schedule: {описание / Unknown}\nLive-in / Live-out: {Live-in / Live-out / Flexible / Unknown}\n\n{ТОЛЬКО если scenario == en_outside:}\n[EN — OUTSIDE KAZAKHSTAN]\nPlans to come to Kazakhstan: {Yes / No / Maybe}\nArrival timing: {описание / Unknown}\nTickets: {Yes / No / Unknown}\nTicket payer: {Candidate / Employer / Unknown}\n\n[DOCUMENTS]\nCV: {Received — актуальное / Received — устаревшее / Not received}\nVideo: {Received / Not received}\nRecommendations: {Original received / Not provided / Needs verification}\nPolice clearance: {Received / Requested / Not provided}\nMedical book: {Received / Requested / Not provided}\nOther: {перечислить или None}\n\n[РЕЗЮМЕ — ПЕРЕВОД НА РУССКИЙ]\n{Полный перевод CV. Удали телефоны/email/мессенджеры/ссылки. Удали фамилию — только Имя. Если CV нет — пропусти блок}\n\n[КЛИЕНТСКАЯ ССЫЛКА]\n{state.client_folder_link или ещё не сформирована}\n\n[AGENT CONTROL]\nAgent status: active\nLast completed step: {state.last_step}\nManager override: No\n</task_main_note>\n\n<task_summary_note>\n[КРАТКИЕ ВЫВОДЫ ПО КАНДИДАТУ]\n\nИмя, возраст: {state.first_name}, {age} лет\n\nНавыки и опыт: 2-4 предложения на русском.\nМестонахождение: {city}, {country}\nАнглийский (по тексту переписки): {english_level_observed или \"Нет видео\"}\n{ТОЛЬКО если scenario == en_kz:}\nВиза: {Есть, до DD.MM.YYYY / Нет / Неизвестно}\n\n[КЛИЕНТСКАЯ ССЫЛКА]\n{state.client_folder_link}\n</task_summary_note>\n\n<examples>\nЭталонные reply_text:\n\n1. EN+KZ initial greeting (state.last_step=null):\n\"Hello! Vacancies: t.me/filipinokazahstan and fb.com/groups/vacancy2kz. Please send CV and video.\"\n\n2. EN+KZ after CV+video received:\n\"Got it, thanks. Country and city now?\"\n\n3. EN+KZ after CV outdated:\n\"Thanks. CV not updated — please send latest with last job and dates.\"\n\n4. RU+KZ initial greeting:\n\"Здравствуйте! Вакансии: t.me/jobkazahstanAZ. Пришлите резюме и видео, пожалуйста.\"\n\n5. EN+OUTSIDE relocation question:\n\"Thanks. When do you plan to come to Kazakhstan?\"\n\n6. References emphasis (any EN):\n\"Have references from previous employers? Genuine ones? Can we contact them?\"\n</examples>\n\n<output_format>\nВСЕГДА возвращай ТОЛЬКО валидный JSON по плоской схеме:\n\n{\n  \"reply_text\": \"короткий ответ кандидату (1-2 предложения)\",\n  \"reply_language\": \"RU или EN\" (ТОЛЬКО эти два кода, не \"English\"),\n  \"main_note_text\": \"ПОЛНЫЙ текст [MAIN] note по формату task_main_note\",\n  \"summary_note_text\": \"ПОЛНЫЙ текст [SUMMARY] или пустая строка\",\n  \"transition_to_qualified\": false,\n  \"english_level_observed\": \"A1-A2 / B1 / B2 / C1-C2 или пустая строка\" (ТОЛЬКО эти коды),\n  \"state_language\": \"RU или EN\",\n\"state_scenario\": \"ru_kz / en_kz / en_outside / ru_en_relocate / ru_local\" (ТОЛЬКО эти коды),\n  \"state_in_kazakhstan\": false,\n  \"state_last_step\": \"start / request_country_city / request_job / request_passport / request_visa / request_arrival_date / request_experience / request_schedule / request_live_in / request_plans / request_tickets / request_ticket_payer / request_recommendations / request_police_clearance / request_medical / request_other_documents\" (ТОЛЬКО эти коды, не свободный текст),\n  \"state_current_country\": \"название или пустая\",\n  \"state_current_city\": \"название или пустая\",\n  \"state_interested_vacancy\": \"вакансия или пустая\",\n  \"state_plans_to_come\": false,\n  \"state_tickets\": false,\n  \"state_first_name\": \"имя или пустая\",\n  \"state_client_folder_link\": \"ссылка или пустая\",\n\"state_documents_received\": [\"только фактически полученные: cv / video / recommendations / police_clearance / medical_book\"]\n}\n\nВСЕ 17 полей обязательны. Незаполненные текстовые = \"\" (не null), boolean = false.\nmain_note_text — ПОЛНЫЙ текст всех секций (Code-нода Mapping сделает PATCH в существующее [MAIN]).\n</output_format>"
+        }
+      },
+      "id": "ea4aa2f2-9c4c-4e13-8756-1f3521d9402c",
+      "name": "Intake Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        4784,
+        944
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Phase 3.3: native langchain agent (pattern Marina). Sonnet 4.6 primary, gpt-4.1 fallback, outputParserStructured for JSON, toolThink for reasoning. systemMessage will be replaced with finalized prompt v1.0 after /prompt-master audit."
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "f311189d-7f51-4dae-9665-73dd329e12e0",
+      "name": "Fallback gpt-4.1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        4816,
+        1168
+      ],
+      "notes": "Phase 3.3 PLACEHOLDER credential OpenAi-voronoi. Илья подключит клиентский ключ позже."
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"reply_text\": \"Здравствуйте! Пришлите резюме и видео.\",\n  \"reply_language\": \"RU\",\n  \"main_note_text\": \"[ОСНОВНАЯ ИНФОРМАЦИЯ]\\nLanguage: RU\\n...\",\n  \"summary_note_text\": \"\",\n  \"transition_to_qualified\": false,\n  \"english_level_observed\": \"\",\n  \"state_language\": \"RU\",\n  \"state_scenario\": \"ru_kz\",\n  \"state_in_kazakhstan\": false,\n  \"state_last_step\": \"start\",\n  \"state_current_country\": \"Kazakhstan\",\n  \"state_current_city\": \"Almaty\",\n  \"state_interested_vacancy\": \"Nanny\",\n  \"state_plans_to_come\": false,\n  \"state_tickets\": false,\n  \"state_first_name\": \"\",\n  \"state_client_folder_link\": \"\", \n  \"state_documents_received\": [\"cv\", \"video\"]\n}",
+        "autoFix": true
+      },
+      "id": "b8c77ba2-7ece-4eff-806b-e2c3ba956263",
+      "name": "Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        5072,
+        1168
+      ],
+      "notes": "Phase 3.3: Output Parser Structured с JSON schema из agents-system-v2.md §2.5. autoFix=true для толерантности к неправильному JSON от LLM."
+    },
+    {
+      "parameters": {},
+      "id": "6ece5b11-3065-4bb1-867b-e72569cf14c5",
+      "name": "Think",
+      "type": "@n8n/n8n-nodes-langchain.toolThink",
+      "typeVersion": 1.1,
+      "position": [
+        4944,
+        1168
+      ],
+      "notes": "Phase 3.3: tool для рассуждения (chain-of-thought). Паттерн Marina у Воронoгo — улучшает качество ответов на сложные вопросы."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Notes prep v3.2: find existing [MAIN]/[SUMMARY] from Get AmoCRM Notes (распаковка data обёртки AmoCRM)\n// Phase 3.9.7 Fix 2: детерминированная подмена [КЛИЕНТСКАЯ ССЫЛКА] в main_note_text на фактический URL,\n// если он есть в client_google_link. Не зависит от поведения Sonnet 4.6.\nconst m = $('Mapping').first().json;\n\n// AmoCRM возвращает JSON в строке data — распаковываем\nconst raw = $input.first().json;\nconst parsed = raw.data ? JSON.parse(raw.data) : raw;\nconst allNotes = parsed._embedded?.notes || [];\n\nconst mainNote = allNotes.find(n => (n.params?.text || '').startsWith('[ОСНОВНАЯ ИНФОРМАЦИЯ]'));\nconst summaryNote = allNotes.find(n => (n.params?.text || '').startsWith('[КРАТКИЕ ВЫВОДЫ ПО КАНДИДАТУ]'));\nconst mainNoteId = mainNote?.id || null;\nconst summaryNoteId = summaryNote?.id || null;\n\n// ДЕТЕРМИНИРОВАННАЯ ПОДМЕНА [КЛИЕНТСКАЯ ССЫЛКА] на фактический URL\nlet mainText = m.main_note_text || '';\nif (m.client_google_link && mainText) {\n  // Заменить строку после \"[КЛИЕНТСКАЯ ССЫЛКА]\\n\" (любой текст до следующего \\n) на наш URL\n  mainText = mainText.replace(\n    /\\[КЛИЕНТСКАЯ ССЫЛКА\\]\\n[^\\n]+/,\n    `[КЛИЕНТСКАЯ ССЫЛКА]\\n${m.client_google_link}`\n  );\n}\n\n// Build main note body — with id for PATCH, without for POST\nconst mainPayload = { note_type: 'common', params: { text: mainText } };\nif (mainNoteId) mainPayload.id = mainNoteId;\nconst mainNoteBody = JSON.stringify([mainPayload]);\nconst mainNoteMethod = mainNoteId ? 'PATCH' : 'POST';\n\n// Build summary note body\nlet summaryNoteBody = null;\nlet summaryNoteMethod = null;\nif (m.summary_note_text) {\n  const summaryPayload = { note_type: 'common', params: { text: m.summary_note_text } };\n  if (summaryNoteId) summaryPayload.id = summaryNoteId;\n  summaryNoteBody = JSON.stringify([summaryPayload]);\n  summaryNoteMethod = summaryNoteId ? 'PATCH' : 'POST';\n}\n\n// Lead patch\nconst leadPatchObj = {};\nif (m.transition_to_qualified) leadPatchObj.status_id = m.qualified_status_id;\nif (m.new_lead_name) leadPatchObj.name = m.new_lead_name;\nif (m.client_google_link) {\n  leadPatchObj.custom_fields_values = [{\n    field_id: m.client_google_link_field_id,\n    values: [{ value: m.client_google_link }]\n  }];\n}\nconst hasLeadPatch = Object.keys(leadPatchObj).length > 0;\nconst leadPatchBody = hasLeadPatch ? JSON.stringify(leadPatchObj) : null;\n\nreturn [{\n  json: {\n    ...m,\n    main_note_text_final: mainText,\n    main_note_id: mainNoteId,\n    summary_note_id: summaryNoteId,\n    main_note_body: mainNoteBody,\n    main_note_method: mainNoteMethod,\n    summary_note_body: summaryNoteBody,\n    summary_note_method: summaryNoteMethod,\n    has_summary: !!m.summary_note_text,\n    summary_existed: !!summaryNoteId,\n    lead_patch_body: leadPatchBody,\n    has_lead_patch: hasLeadPatch\n  }\n}];"
+      },
+      "id": "9eeaf25f-b523-49e7-8636-781c0d05bf9b",
+      "name": "Notes prep",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5888,
+        912
+      ],
+      "notes": "Branch 1 prep: bodies for POST notes and PATCH lead. Phase 3.3.2 will add POST/PATCH-if-existing logic."
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.main_note_method }}",
+        "url": "={{ $('Mapping').item.json.account_url }}/api/v4/leads/{{ $('Mapping').item.json.lead_id }}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.main_note_body }}",
+        "options": {}
+      },
+      "id": "66cccd5c-434e-4f7b-a851-92275d2de839",
+      "name": "POST/PATCH MAIN note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6112,
+        624
+      ],
+      "notes": "POST main note. Phase 3.3.2 add PATCH-if-existing."
+    },
+    {
+      "parameters": {
+        "method": "={{ $json.summary_note_method }}",
+        "url": "={{ $('Mapping').item.json.account_url }}/api/v4/leads/{{ $('Mapping').item.json.lead_id }}/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.summary_note_body }}",
+        "options": {}
+      },
+      "id": "2cb4560f-e0b0-45a4-b1c3-19e5f002588d",
+      "name": "POST/PATCH SUMMARY note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6336,
+        816
+      ],
+      "notes": "POST summary note. Phase 3.3.2 add IF check has_summary."
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $('Notes prep').item.json.account_url }}/api/v4/leads/{{ $('Notes prep').item.json.lead_id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $('Notes prep').item.json.lead_patch_body }}",
+        "options": {}
+      },
+      "id": "ca6c5f44-1201-437f-8bf4-98d2fa1fa49c",
+      "name": "PATCH lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6336,
+        1008
+      ],
+      "notes": "PATCH lead - status_id (transition), name (CV), UF[YOUR_NUMERIC_ID] (Drive link). Phase 3.3.2 add IF check has_lead_patch."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_summary }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c07e47ec-16a3-4cb7-916c-822559ad4d81",
+      "name": "IF has_summary",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6112,
+        816
+      ],
+      "notes": "Phase 3.3.2: выполнить POST SUMMARY только если has_summary=true (summary_note_text не null). False ветка — ничего не делаем, ветка заканчивается."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.has_lead_patch }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b3e73648-4af9-4da0-ba58-ada8f3cf74d0",
+      "name": "IF has_lead_patch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        6112,
+        1008
+      ],
+      "notes": "Phase 3.3.2: выполнить PATCH lead только если has_lead_patch=true (есть transition/name/client_link). False ветка — ничего не делаем."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c0",
+                    "leftValue": "={{ $json.has_document }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  },
+                  {
+                    "id": "has-image-cond",
+                    "leftValue": "={{ $json.has_image }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c1",
+                    "leftValue": "={{ $json.has_voice }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Voice"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "c2",
+                    "leftValue": "={{ $json.has_video }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Video"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "Other"
+        }
+      },
+      "id": "49a1aded-04da-4217-b4f5-eb6d431e107d",
+      "name": "Switch attachments",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -48,
+        800
+      ],
+      "notes": "Phase 3.4: Switch by attachments. case 0 = PDF (has_document=true) → CV processing. fallback = text/voice/video → напрямую к Intake Agent. Phase 3.6 расширит до voice/video веток."
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.attachments[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "d48b605f-637a-42f5-87be-b331cfaa1036",
+      "name": "Download CV file",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        176,
+        480
+      ],
+      "notes": "Phase 3.4: скачиваем PDF/docx по attachment URL. binary response для extractFromFile."
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "id": "7beb41f5-4b16-4c20-a3ae-ff7e91a77573",
+      "name": "Extract CV text",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        848,
+        496
+      ],
+      "notes": "Phase 3.4: нативный экстракт текста из PDF (для docx изменить operation=docx). Не требует внешних API."
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Переведи на русский язык это резюме няни. Удали ВСЕ контакты (телефоны, email, мессенджеры, ссылки, адреса). Удали фамилию — оставь только имя. Перевод естественный.\n\nИсходный текст резюме:\n{{ $json.text }}",
+        "messages": {
+          "messageValues": [
+            {
+              "message": "Ты переводчик резюме филиппинских и русскоязычных нянь. Возвращаешь ТОЛЬКО переведённый текст без комментариев и заголовков."
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "id": "101d81a0-05dd-4198-8dfa-5ca905833235",
+      "name": "CV Translator",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        1296,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Phase 3.4 CV Translator chain (паттерн Marina Logist chainLlm). Простой prompt + LLM + parser. Без agent/tools — детерминированный."
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Build Context').first().json.lead_id }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_ID"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID"
+        },
+        "options": {}
+      },
+      "id": "2d74cf6b-5a7f-43c6-8a37-53ced0d9896e",
+      "name": "Drive create folder",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2672,
+        640
+      ],
+      "notes": "Phase 3.9.12 unification: имя папки = {lead_id} (без first_name). Симметрия с Drive create folder (video). Phase 3.9.13 переименует на {lead_id} - {first_name} после CV Extractor."
+    },
+    {
+      "parameters": {
+        "operation": "createFromText",
+        "content": "={{ $('CV Translator').item.json.text }}",
+        "name": "=CV_translated_ru",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_ID"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.folder_id }}"
+        },
+        "options": {
+          "convertToGoogleDocument": true
+        }
+      },
+      "id": "b40730dd-44b6-4e04-be0f-ed47e3757857",
+      "name": "Drive upload Google Doc",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3568,
+        432
+      ],
+      "notes": "Phase 3.4: upload с автоконвертацией в Google Doc."
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Drive create folder').item.json.id }}"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "id": "4cd7b2d6-299a-4db0-9266-d717e63b8a75",
+      "name": "Drive share permissions",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2896,
+        640
+      ],
+      "notes": "Phase 3.4: share permissions anyone reader на папку кандидата."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cv1",
+              "name": "cv_translated_text",
+              "value": "={{ $('CV Translator').item.json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "cv2",
+              "name": "cv_first_name",
+              "value": "={{ $('CV Extractor').item.json.output.first_name }}",
+              "type": "string"
+            },
+            {
+              "id": "cv3",
+              "name": "cv_internal_full_name",
+              "value": "={{ $('CV Extractor').item.json.output.internal_full_name }}",
+              "type": "string"
+            },
+            {
+              "id": "cv4",
+              "name": "cv_age",
+              "value": "={{ $('CV Extractor').item.json.output.age }}",
+              "type": "string"
+            },
+            {
+              "id": "cv5",
+              "name": "cv_profession",
+              "value": "={{ $('CV Extractor').item.json.output.profession }}",
+              "type": "string"
+            },
+            {
+              "id": "cv5b",
+              "name": "cv_is_outdated",
+              "value": "={{ $('CV Extractor').item.json.output.is_outdated }}",
+              "type": "string"
+            },
+            {
+              "id": "cv6",
+              "name": "cv_client_link",
+              "value": "={{ $('Resolve CV folder').first().json.folder_url }}",
+              "type": "string"
+            },
+            {
+              "id": "cv7",
+              "name": "cv_folder_id",
+              "value": "={{ $('Resolve CV folder').first().json.folder_id }}",
+              "type": "string"
+            },
+            {
+              "id": "cv8",
+              "name": "current_message",
+              "value": "=[CV PROCESSED — original CV was attached, translated to Russian for manager only. Extracted: first_name={{ $('CV Extractor').item.json.output.first_name }}, age={{ $('CV Extractor').item.json.output.age }}, profession={{ $('CV Extractor').item.json.output.profession }}, is_outdated={{ $('CV Extractor').item.json.output.is_outdated }}, drive_folder={{ $('Resolve CV folder').first().json.folder_url }}]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "13d1bc63-1428-4e0e-a4c8-b8d963b16797",
+      "name": "Set CV result",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4016,
+        432
+      ],
+      "notes": "Phase 3.4: объединяет CV результат + Drive client_link в context для Intake Agent."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "v1",
+              "name": "voice_transcript",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "v2",
+              "name": "current_message",
+              "value": "={{ ($('Build Context').item.json.current_message || '') + '\n\n[VOICE TRANSCRIPT]: ' + $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "11f4b358-97c0-44a6-aa95-98901408f365",
+      "name": "Set Voice merge",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4016,
+        896
+      ],
+      "notes": "Phase 3.6: Whisper transcript добавляется к current_message для Intake Agent."
+    },
+    {
+      "parameters": {
+        "name": "=Video_{{ $('Build Context').first().json.lead_id }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_ID"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.folder_id }}"
+        },
+        "options": {}
+      },
+      "id": "8626250a-91bb-42fc-a831-29e87d971757",
+      "name": "Drive upload Video",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3792,
+        1264
+      ],
+      "notes": "Phase 3.6: video загружается в root. Phase 3.6.2 — в папку кандидата если PDF уже обработан, или создание папки первым видео."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "vd1",
+              "name": "video_uploaded",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "vd2",
+              "name": "video_drive_link",
+              "value": "={{ $json.webViewLink }}",
+              "type": "string"
+            },
+            {
+              "id": "vd3",
+              "name": "current_message",
+              "value": "=[VIDEO uploaded to Drive: {{ $json.webViewLink }}]",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2a666ee5-cbce-4d18-970d-63ab706269a8",
+      "name": "Set Video merge",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4016,
+        1264
+      ],
+      "notes": "Phase 3.6: Drive video link для Intake Agent (попадает в [MAIN] note Documents.Video=Received)."
+    },
+    {
+      "parameters": {
+        "content": "## 4. Маршрутизатор\n\n**Switch attachments** — разводит по типу вложения:\n• PDF → обработка резюме\n• Голос → расшифровка\n• Видео → загрузка на Drive\n• Текст → сразу к AI",
+        "height": 496,
+        "width": 284,
+        "color": 5
+      },
+      "id": "5ee3a56f-f8c6-47b3-8a88-2aac6f587aed",
+      "name": "Block 6: Switch attachments",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5. Резюме (PDF)\n\n**Download CV file** — скачивает PDF.\n**Extract CV text** — вытягивает текст из PDF.\n**CV Translator** — переводит на русский, убирает контакты и фамилию.\n**CV Extractor** — извлекает имя, возраст, опыт, актуальность.\n**Drive create folder** — создаёт папку кандидата.\n**Drive upload Google Doc** — заливает перевод как Google Doc.\n**Drive share file** + **Drive share permissions** — открывают доступ по ссылке.\n**Set CV result** — передаёт AI краткую выжимку (без полного перевода).",
+        "height": 1432,
+        "width": 1616,
+        "color": 6
+      },
+      "id": "fe1f44fd-d455-4a65-b7e3-9c47f59b3e5a",
+      "name": "Block 7: PDF processing",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        112,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 6. Голосовое\n\n**Download voice file** — скачивает аудио.\n**Audio Transcribe** — Whisper переводит в текст.\n**Set Voice merge** — добавляет расшифровку к сообщению.",
+        "height": 320,
+        "width": 520,
+        "color": 6
+      },
+      "id": "91809b19-bbfc-4ac0-a2b8-f739cd54f15a",
+      "name": "Block 8: Voice (Whisper)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3584,
+        736
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 7. Видео\n\n**Drive upload Video** — заливает видео в Google Drive.\n**Set Video merge** — помечает что видео получено.",
+        "height": 296,
+        "width": 520,
+        "color": 6
+      },
+      "id": "7d2752c4-a45e-4250-b283-95fc04a44cef",
+      "name": "Block 9: Video (Drive only)",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        1120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 10. Обновление сделки (AmoCRM)\n\n**Get AmoCRM Notes** — ищет существующие примечания.\n**Notes prep** — готовит тела запросов.\n**POST/PATCH MAIN note** — основная анкета кандидата (создаёт или обновляет).\n**POST/PATCH SUMMARY note** — краткое резюме для менеджера.\n**Pin SUMMARY note** — закрепляет в шапке сделки.\n**PATCH lead** — обновляет поля сделки (имя, ссылка Drive, этап).",
+        "height": 576,
+        "width": 1180,
+        "color": 4
+      },
+      "id": "2a6a1dc7-bfe9-462f-9d81-631a835861e5",
+      "name": "Block 11: Branch 1 — CRM update",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5760,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.attachments[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "ee750f80-d5e3-44da-800a-9b3d721a0b8f",
+      "name": "Download voice file",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3568,
+        896
+      ],
+      "notes": "Скачиваем аудиофайл из AmoCRM/Pact как binary"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Mapping').item.json.account_url }}/api/v4/leads/notes/{{ JSON.parse($json.data)._embedded.notes[0].id }}/pin",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "afa5bb6e-bc30-4b45-b8a1-0b5926cd9ca0",
+      "name": "Pin SUMMARY note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6560,
+        816
+      ],
+      "notes": "Закрепить [SUMMARY] note в шапке сделки. Для удобства Камиллы — закреплённое примечание видно сразу при открытии сделки."
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.text }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "first_name",
+              "description": "Имя кандидата без фамилии (например: Bernadeth, Maria)"
+            },
+            {
+              "name": "internal_full_name",
+              "description": "Полное имя с фамилией для внутреннего использования"
+            },
+            {
+              "name": "age",
+              "description": "Возраст в годах целое число. Если не указан null"
+            },
+            {
+              "name": "profession",
+              "description": "Профессия одним словом Nanny / Housemaid / Tutor / Nanny-Housemaid / School job / Other"
+            },
+            {
+              "name": "years_of_experience",
+              "description": "Количество лет опыта работы целое число"
+            },
+            {
+              "name": "countries_worked",
+              "description": "Массив стран где работал кандидат"
+            },
+            {
+              "name": "skills",
+              "description": "Массив навыков из CV"
+            },
+            {
+              "name": "languages",
+              "description": "Массив языков которыми владеет"
+            },
+            {
+              "name": "education",
+              "description": "Краткое описание образования одна строка"
+            },
+            {
+              "name": "is_outdated",
+              "description": "true если в CV нет последнего места работы или нет дат, false если CV свежий"
+            },
+            {
+              "name": "warnings",
+              "description": "Массив предупреждений о CV если что-то странное"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e20e16a2-4625-4eec-a79d-678632da0f88",
+      "name": "CV Extractor",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1648,
+        480
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "notes": "Извлекает структурированные данные из переведённого CV. Information Extractor fromAttributes — нативная нода n8n под structured extraction."
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Drive upload Google Doc').item.json.id }}"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "id": "fca5c9f2-c4e0-46c1-84a4-36844e66bcf6",
+      "name": "Drive share file",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        3792,
+        432
+      ],
+      "notes": "Phase 3.7: share permissions anyone reader на сам файл Google Doc (08.05.2026 evening)."
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        5152,
+        1376
+      ],
+      "id": "622d53b8-3872-4cbd-a037-f1d8b1481ad9",
+      "name": "gpt-4.1"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "chat_logs",
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "session_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body['message[add][0][element_id]'] }}"
+            }
+          ]
+        }
+      },
+      "id": "7569e3ca-9e17-462a-808d-b08f1653ac0b",
+      "name": "Load Chat History",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        736
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Phase 3.9: Абсолютная память — 50 последних сообщений по session_id (lead_id). Заменяет GET chat history."
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "chat_sessions",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Webhook').item.json.body['message[add][0][element_id]'] }}"
+            }
+          ]
+        }
+      },
+      "id": "dcae901b-145f-4b61-a9b1-8acf829b8f4f",
+      "name": "Load Session",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        -720,
+        928
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Phase 3.9: state диалога. Пустой массив = новая сделка."
+    },
+    {
+      "parameters": {
+        "mode": "chooseBranch",
+        "output": "empty"
+      },
+      "id": "438b9752-c21c-4216-a108-55d2d564792a",
+      "name": "Wait For Data",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        -496,
+        832
+      ],
+      "notes": "Phase 3.9: ожидает chat_logs + chat_sessions перед Build Context"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Mapping').item.json.account_url }}/api/v4/leads/{{ $('Mapping').item.json.lead_id }}/notes?limit=250",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "=oAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1316ea26-7c4f-4579-9d06-0bcbe2255336",
+      "name": "Get AmoCRM Notes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5664,
+        912
+      ],
+      "notes": "Phase 3.9: Получает все notes сделки для поиска [MAIN]/[SUMMARY] (PATCH-if-existing). История диалога теперь в Supabase, но [MAIN]/[SUMMARY] остаются в AmoCRM по ТЗ §15-16."
+    },
+    {
+      "parameters": {
+        "tableId": "chat_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Mapping').item.json.lead_id }}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "user"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Refresh Context').first().json.resolved_message || '[no text]' }}"
+            },
+            {
+              "fieldId": "language",
+              "fieldValue": "={{ $('Mapping').item.json.reply_language }}"
+            },
+            {
+              "fieldId": "attachments_meta",
+              "fieldValue": "={{ $('Build Context').first().json.attachments && $('Build Context').first().json.attachments.length ? JSON.stringify($('Build Context').first().json.attachments) : null }}"
+            }
+          ]
+        }
+      },
+      "id": "a63accf5-eb00-4d99-b63f-9c078dd434fa",
+      "name": "Save User Message",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5664,
+        1200
+      ],
+      "continueOnFail": true,
+      "notes": "Phase 3.9: сохраняет входящее сообщение кандидата в chat_logs (абсолютная память)."
+    },
+    {
+      "parameters": {
+        "tableId": "chat_logs",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "session_id",
+              "fieldValue": "={{ $('Mapping').item.json.lead_id }}"
+            },
+            {
+              "fieldId": "role",
+              "fieldValue": "assistant"
+            },
+            {
+              "fieldId": "content",
+              "fieldValue": "={{ $('Mapping').item.json.reply_text }}"
+            },
+            {
+              "fieldId": "language",
+              "fieldValue": "={{ $('Mapping').item.json.reply_language }}"
+            },
+            {
+              "fieldId": "model",
+              "fieldValue": "claude-sonnet-4-6"
+            }
+          ]
+        }
+      },
+      "id": "34f47395-9230-465c-9221-9677ae6b49dc",
+      "name": "Save AI Response",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        5888,
+        1200
+      ],
+      "continueOnFail": true,
+      "notes": "Phase 3.9: сохраняет ответ AI в chat_logs (абсолютная память)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_SUPABASE_PROJECT.supabase.co/rest/v1/chat_sessions?on_conflict=lead_id",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "YOUR_SUPABASE_SERVICE_ROLE_KEY"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind0Y25vcHFkdndteHdld3h4dnVyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODM4OTkxNCwiZXhwIjoyMDkzOTY1OTE0fQ.HBu1wcuHAE3kMXz8BTxKSThyfAGBI7EIAoME8nkLkbE"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Prefer",
+              "value": "resolution=merge-duplicates,return=minimal"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"lead_id\": \"{{ $('Mapping').item.json.lead_id }}\", \"language\": \"{{ $('Mapping').item.json.reply_language }}\", \"scenario\": \"{{ $('Mapping').item.json.state_scenario || '' }}\", \"in_kazakhstan\": {{ $('Mapping').item.json.state_in_kazakhstan === true ? 'true' : ($('Mapping').item.json.state_in_kazakhstan === false ? 'false' : 'null') }}, \"last_step\": \"{{ $('Mapping').item.json.state_last_step || 'start' }}\", \"current_country\": \"{{ $('Mapping').item.json.state_current_country || '' }}\", \"current_city\": \"{{ $('Mapping').item.json.state_current_city || '' }}\", \"interested_vacancy\": \"{{ $('Mapping').item.json.state_interested_vacancy || '' }}\", \"first_name\": \"{{ $('Mapping').item.json.state_first_name || '' }}\", \"client_folder_link\": \"{{ $('Mapping').item.json.state_client_folder_link || '' }}\", \"transition_to_qualified\": {{ $('Mapping').item.json.transition_to_qualified === true ? 'true' : 'false' }}, \"english_level_observed\": \"{{ $('Mapping').item.json.english_level_observed || '' }}\", \"documents_received\": {{ JSON.stringify($('Mapping').item.json.state_documents_received || []) }} }",
+        "options": {}
+      },
+      "id": "85401b0b-06c7-4e27-816b-5e018521bc1c",
+      "name": "Upsert Session",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        6112,
+        1200
+      ],
+      "notes": "Phase 3.9: upsert состояния диалога в chat_sessions (PostgREST upsert через Prefer: resolution=merge-duplicates + on_conflict=lead_id). Supabase node не имеет upsert operation — используем HTTP."
+    },
+    {
+      "parameters": {
+        "content": "## 11. Запись памяти (Supabase)\n\n**Save User Message** — сохраняет сообщение кандидатки.\n**Save AI Response** — сохраняет ответ бота.\n**Upsert Session** — обновляет состояние диалога (язык, сценарий, какой шаг).\n\nНе видно менеджеру — это внутренняя память бота.",
+        "height": 356,
+        "width": 1164,
+        "color": 4
+      },
+      "id": "514e7a4f-588d-415a-9c7d-9e0dc087104b",
+      "name": "Block 10: Branch 2 — Supabase memory",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5360,
+        928
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Build Context').first().json.attachments[0].url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "4f3f0373-7ceb-4bb6-904a-c92fc5b35553",
+      "name": "Download video file",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3344,
+        1264
+      ],
+      "notes": "Phase 3.9.8: скачивание видео по реальному URL от AmoCRM/Pact — binary data для Drive upload."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "vf1",
+              "leftValue": "={{ $('Build Context').first().json.state?.client_folder_link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4a48abd1-ca1b-4241-8e6f-605779a6f8f9",
+      "name": "IF folder exists",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        1248
+      ],
+      "notes": "Phase 3.9.11: true=папка есть → skip create. false=нет папки → Drive create folder."
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $('Build Context').first().json.lead_id }}",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_ID"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID"
+        },
+        "options": {}
+      },
+      "id": "822f3b3c-a771-4e15-a5f4-f2d3cc661899",
+      "name": "Drive create folder (video)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2672,
+        1424
+      ],
+      "notes": "Phase 3.9.11: создаёт папку {lead_id} в root если PDF ещё не было."
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "id": "e9ba3937-5220-4e40-861d-434b47d86f80",
+      "name": "Drive share folder (video)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2896,
+        1424
+      ],
+      "notes": "Phase 3.9.11: anyone reader для новой видео-папки."
+    },
+    {
+      "parameters": {},
+      "id": "820067c4-8003-49cb-b67d-3656a6cf2432",
+      "name": "Merge video paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3120,
+        1264
+      ],
+      "notes": "Phase 3.9.11: объединяет 2 ветки IF folder exists перед Drive upload Video."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cvf1",
+              "leftValue": "={{ $('Build Context').first().json.state?.client_folder_link }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "31a43e75-ef5c-431e-afc2-df058ebc8a39",
+      "name": "IF folder exists (CV)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2000,
+        480
+      ],
+      "notes": "Phase 3.9.11b: true=папка есть (видео создало) → skip create. false=нет папки → Drive create folder."
+    },
+    {
+      "parameters": {},
+      "id": "f966689b-fd6c-4068-9a9b-1e90f42fe0b2",
+      "name": "Merge CV paths",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        3120,
+        432
+      ],
+      "notes": "Phase 3.9.11b: объединяет 2 ветки IF folder exists (CV) перед Drive upload Google Doc."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 3.9.11c: безопасный resolve folder_id после Merge CV paths\n// Приоритет:\n//   1. Drive create folder (FALSE branch search no found → create)\n//   2. Drive search folder (CV) (FALSE branch IF folder → search found in Drive)\n//   3. state.client_folder_link (TRUE branch IF folder — papka уже была)\nconst context = $('Build Context').first().json;\nlet folder_id = null;\nlet folder_url = null;\n\n// 1. Drive create folder — свежая созданная\ntry {\n  const driveCreate = $('Drive create folder').all();\n  if (driveCreate.length > 0 && driveCreate[0].json && driveCreate[0].json.id) {\n    folder_id = driveCreate[0].json.id;\n    folder_url = `https://drive.google.com/drive/folders/${folder_id}`;\n  }\n} catch (e) {}\n\n// 2. Drive search — нашли папку созданную другим execution (race protection)\nif (!folder_id) {\n  try {\n    const driveSearch = $('Drive search folder (CV)').all();\n    if (driveSearch.length > 0 && driveSearch[0].json && driveSearch[0].json.id) {\n      folder_id = driveSearch[0].json.id;\n      folder_url = `https://drive.google.com/drive/folders/${folder_id}`;\n    }\n  } catch (e) {}\n}\n\n// 3. state.client_folder_link (TRUE branch IF folder — был видео раньше)\nif (!folder_id) {\n  folder_url = context.state?.client_folder_link || '';\n  folder_id = folder_url ? (folder_url.split('/folders/')[1] || 'root') : 'root';\n}\n\nreturn [{\n  json: {\n    ...($input.first()?.json || {}),\n    folder_id,\n    folder_url\n  }\n}];"
+      },
+      "id": "20859c8f-c1dc-43e4-b301-93a3862a7f5c",
+      "name": "Resolve CV folder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        432
+      ],
+      "notes": "Phase 3.9.11b: безопасный resolve folder_id через try/catch (избегаем expression error \"Node hasn't been executed\")."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 3.9.11c: безопасный resolve folder_id для video\n// Приоритет:\n//   1. Drive create folder (video) — свежая созданная\n//   2. Drive search folder (video) — нашли папку созданную другим execution (race protection)\n//   3. state.client_folder_link — был PDF раньше\nconst context = $('Build Context').first().json;\nlet folder_id = null;\nlet folder_url = null;\n\ntry {\n  const driveCreate = $('Drive create folder (video)').all();\n  if (driveCreate.length > 0 && driveCreate[0].json && driveCreate[0].json.id) {\n    folder_id = driveCreate[0].json.id;\n    folder_url = `https://drive.google.com/drive/folders/${folder_id}`;\n  }\n} catch (e) {}\n\nif (!folder_id) {\n  try {\n    const driveSearch = $('Drive search folder (video)').all();\n    if (driveSearch.length > 0 && driveSearch[0].json && driveSearch[0].json.id) {\n      folder_id = driveSearch[0].json.id;\n      folder_url = `https://drive.google.com/drive/folders/${folder_id}`;\n    }\n  } catch (e) {}\n}\n\nif (!folder_id) {\n  folder_url = context.state?.client_folder_link || '';\n  folder_id = folder_url ? (folder_url.split('/folders/')[1] || 'root') : 'root';\n}\n\n// Сохраняем binary из Download video file\nconst input = $input.first();\nreturn [{\n  json: {\n    ...(input?.json || {}),\n    folder_id,\n    folder_url\n  },\n  binary: input?.binary\n}];"
+      },
+      "id": "cd4722dc-a333-4c17-bf23-08e49583e2db",
+      "name": "Resolve Video folder",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        1264
+      ],
+      "notes": "Phase 3.9.11b: безопасный resolve folder_id для video (try/catch). Сохраняет binary для Drive upload Video."
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('Build Context').first().json.lead_id }}",
+        "filter": {
+          "driveId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "YOUR_GOOGLE_DRIVE_ID"
+          },
+          "folderId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID"
+          }
+        },
+        "options": {}
+      },
+      "id": "4ea3c4bd-76f8-4eb1-b458-12b6282bc473",
+      "name": "Drive search folder (CV)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2224,
+        576
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Phase 3.9.11c: ищет папку созданную другим execution (race protection). Partial name match — найдёт и {lead_id} и {lead_id} - {name}."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "ds1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c651d5a5-ad44-4627-9b86-fff76fc89768",
+      "name": "IF Drive search found (CV)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2448,
+        576
+      ],
+      "notes": "Phase 3.9.11c: true = папка найдена в Drive (skip create). false = не найдена (create)."
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('Build Context').first().json.lead_id }}",
+        "filter": {
+          "driveId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "YOUR_GOOGLE_DRIVE_ID"
+          },
+          "folderId": {
+            "__rl": true,
+            "mode": "list",
+            "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID"
+          },
+          "whatToSearch": "folders"
+        },
+        "options": {}
+      },
+      "id": "79414e4b-80c6-4e80-bcfa-49948d3ac04b",
+      "name": "Drive search folder (video)",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        2224,
+        1360
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Phase 3.9.11c: ищет папку созданную другим execution в video ветке (race protection)."
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dsv1",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "127ffc92-fb99-4345-8533-878889d93633",
+      "name": "IF Drive search found (video)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2448,
+        1360
+      ],
+      "notes": "Phase 3.9.11c: true = папка найдена (skip create). false = нет (create)."
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "chat_sessions",
+        "limit": 1,
+        "matchType": "allFilters",
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "lead_id",
+              "condition": "eq",
+              "keyValue": "={{ $('Build Context').first().json.lead_id }}"
+            }
+          ]
+        }
+      },
+      "id": "0a8824bf-0451-4f6d-aa10-fd458e891f1a",
+      "name": "Load Session reload",
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        4240,
+        944
+      ],
+      "alwaysOutputData": true,
+      "onError": "continueRegularOutput",
+      "notes": "Phase 3.9.11c: reload chat_sessions перед Intake Agent. Даёт свежий state если параллельный execution успел записать."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Phase 3.9.11c: rebuild prompt_for_agent с свежим state из Load Session reload\nconst buildContext = $('Build Context').first().json;\nconst pc = buildContext.pipeline_country;\nconst injectPipeline = (pc === 'RU' || pc === 'KZ');\nconst pipelineBlock = pc === 'RU'\n  ? `[PIPELINE] Russia — candidate wrote to the RU line. Apply ru_en_relocate or ru_local per the candidate's language.`\n  : `[PIPELINE] Kazakhstan — candidate wrote to the KZ line.`;\nconst reloadItems = $('Load Session reload').all();\nconst reload = reloadItems.length > 0 ? reloadItems[0].json : null;\n\nconst freshState = reload ? {\n  language: reload.language,\n  scenario: reload.scenario,\n  in_kazakhstan: reload.in_kazakhstan,\n  last_step: reload.last_step || 'start',\n  current_country: reload.current_country,\n  current_city: reload.current_city,\n  interested_vacancy: reload.interested_vacancy,\n  first_name: reload.first_name,\n  internal_full_name: reload.internal_full_name,\n  client_folder_link: reload.client_folder_link,\n  documents_received: reload.documents_received || [],\n  transition_to_qualified: reload.transition_to_qualified || false,\n  english_level_observed: reload.english_level_observed\n} : (buildContext.state || {});\n\nfreshState.documents_pending = ['cv', 'video', 'recommendations', 'police_clearance', 'medical_book']\n  .filter(d => !(freshState.documents_received || []).includes(d));\n\nconst history = buildContext.history || [];\nlet text = buildContext.current_message || '';\ntry { const n = $('Set CV result').all();   if (n[0]?.json?.current_message) text = n[0].json.current_message; } catch(e){}\ntry { const n = $('Set Voice merge').all(); if (n[0]?.json?.current_message) text = n[0].json.current_message; } catch(e){}\ntry { const n = $('Set Video merge').all(); if (n[0]?.json?.current_message) text = n[0].json.current_message; } catch(e){}\nconst attachments = buildContext.attachments || [];\n\nconst hasContext = history.length > 0 || reload !== null;\nconst hasAttachments = attachments.length > 0;\n\nlet prompt_for_agent;\nif (!hasContext && !hasAttachments) {\n  prompt_for_agent = injectPipeline\n    ? `${pipelineBlock}\\n\\n${text || '[no text — attachment only]'}`\n    : (text || '[no text — attachment only]');\n} else {\n  const promptParts = [];\n  if (injectPipeline) promptParts.push(pipelineBlock);\n  if (history.length > 0) {\n    const historyText = history.map(h => {\n      const role = h.role === 'user' ? 'Candidate' : 'Bot';\n      return `${role}: ${h.content}`;\n    }).join('\\n');\n    promptParts.push(`[PREVIOUS CONVERSATION — ${history.length} messages, use for context, do NOT repeat questions already asked]\\n${historyText}`);\n  }\n  if (reload !== null) {\n    const stateLines = [];\n    if (freshState.language) stateLines.push(`Language: ${freshState.language}`);\n    if (freshState.scenario) stateLines.push(`Scenario: ${freshState.scenario}`);\n    if (freshState.in_kazakhstan !== null && freshState.in_kazakhstan !== undefined) stateLines.push(`In Kazakhstan: ${freshState.in_kazakhstan}`);\n    if (freshState.last_step) stateLines.push(`Last completed step: ${freshState.last_step}`);\n    if (freshState.current_country) stateLines.push(`Current country: ${freshState.current_country}`);\n    if (freshState.current_city) stateLines.push(`Current city: ${freshState.current_city}`);\n    if (freshState.interested_vacancy) stateLines.push(`Interested vacancy: ${freshState.interested_vacancy}`);\n    if (freshState.first_name) stateLines.push(`Candidate first name: ${freshState.first_name}`);\n    if (freshState.client_folder_link) stateLines.push(`Client folder link: ${freshState.client_folder_link}`);\n    if (Array.isArray(freshState.documents_received) && freshState.documents_received.length) {\n      stateLines.push(`Documents received: ${freshState.documents_received.join(', ')}`);\n    }\n    if (stateLines.length) promptParts.push(`[STATE — результаты предыдущих выяснений (свежие из Supabase)]\\n${stateLines.join('\\n')}`);\n  }\n  promptParts.push(`[NEW MESSAGE FROM CANDIDATE]\\n${text || '[no text — attachment only]'}`);\n  if (hasAttachments) {\n    promptParts.push(`[ATTACHMENTS]\\n${attachments.map(a => `- ${a.type}: ${a.url}`).join('\\n')}`);\n  }\n  prompt_for_agent = promptParts.join('\\n\\n');\n}\n\nreturn [{\n  json: {\n    ...buildContext,\n    state: freshState,\n    prompt_for_agent, \n    resolved_message: text  // gives feedback context to Save User Message Node\n  }\n}];"
+      },
+      "id": "c51ceb13-63f0-4f69-bcbe-557d6c9c882a",
+      "name": "Refresh Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4464,
+        944
+      ],
+      "notes": "Phase 3.9.11c: rebuild prompt_for_agent с свежим state из Load Session reload — AI Agent видит актуальные данные об уже полученных документах."
+    },
+    {
+      "parameters": {
+        "numberInputs": 3
+      },
+      "id": "9554d2aa-3577-49b6-ac1d-e9b7c7ce2573",
+      "name": "Merge CV text",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [
+        1072,
+        464
+      ],
+      "notes": "Phase 3.9.12: Слияние PDF (input 0) и DOCX (input 1) путей в единый поток. Output: {text} → CV Translator."
+    },
+    {
+      "parameters": {},
+      "id": "9a914791-3c2f-401a-8bf1-06ea098151d2",
+      "name": "DOCX to Text",
+      "type": "n8n-nodes-docx-converter.docxToText",
+      "typeVersion": 1,
+      "position": [
+        848,
+        736
+      ],
+      "notes": "Phase 3.9.12 v3.5: Community node n8n-nodes-docx-converter v0.1.3 (Mammoth.js). Локально доказано — извлекает 2219 chars из Pages-сгенерированного DOCX где word-extractor падает. Output $json.text."
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".docx",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".doc",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "DOCX"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".jpg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".jpeg",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".png",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".webp",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  },
+                  {
+                    "leftValue": "={{ ($('Webhook').first().json.body['message[add][0][attachment][file_name]'] || '').toLowerCase() }}",
+                    "rightValue": ".gif",
+                    "operator": {
+                      "type": "string",
+                      "operation": "endsWith"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "IMAGE"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "UNKNOWN"
+        }
+      },
+      "id": "d62766bd-25c2-48ab-a30c-1a061124255d",
+      "name": "Switch by extension",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        400,
+        448
+      ],
+      "notes": "Phase 3.9.15: роутинг CV по расширению. PDF→Extract, DOCX/DOC→Mammoth, IMAGE→Vision. fallback UNKNOWN — для Phase 3.9.16."
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6a15071a-63f5-4964-99e3-a8cf7181196e",
+              "name": "text",
+              "value": "={{ $json.content || $json.text || '' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3e17a97c-5beb-4863-9cdc-20ce20fcbb67",
+      "name": "Set image text",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        848,
+        304
+      ],
+      "notes": "Phase 3.9.15: приводит Vision output к {text} — единый формат с PDF/DOCX ветками для Merge CV text."
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        4688,
+        1168
+      ],
+      "id": "3e0389e8-f802-4712-827f-8cb3ff44586f",
+      "name": "Google Gemini Chat Model"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        1376,
+        704
+      ],
+      "id": "6d21264f-3b1e-4910-bf30-ef6766eb4f8f",
+      "name": "Google Gemini Chat Model1"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        3792,
+        896
+      ],
+      "id": "695f5767-4336-43c0-b15d-42259607ac2d",
+      "name": "Transcribe a recording"
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "text": "Extract ALL text from this resume/CV image exactly as written, preserving structure (name, work experience, skills, education, dates). Return ONLY the extracted text without any commentary.",
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        624,
+        304
+      ],
+      "id": "fc045ddd-1684-4701-838b-2d862ca5868a",
+      "name": "Analyze an image"
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Constants",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Constants": {
+      "main": [
+        [
+          {
+            "node": "IF skip false",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF skip false": {
+      "main": [
+        [
+          {
+            "node": "GET lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET lead": {
+      "main": [
+        [
+          {
+            "node": "3 filters check",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3 filters check": {
+      "main": [
+        [
+          {
+            "node": "IF allow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapping": {
+      "main": [
+        [
+          {
+            "node": "Get amochat session",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get AmoCRM Notes",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Save User Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get amochat session": {
+      "main": [
+        [
+          {
+            "node": "Send message via AmoChats",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fallback gpt-4.1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Intake Agent",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Intake Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Think": {
+      "ai_tool": [
+        [
+          {
+            "node": "Intake Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Intake Agent": {
+      "main": [
+        [
+          {
+            "node": "Mapping",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notes prep": {
+      "main": [
+        [
+          {
+            "node": "POST/PATCH MAIN note",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF has_summary",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "IF has_lead_patch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF has_summary": {
+      "main": [
+        [
+          {
+            "node": "POST/PATCH SUMMARY note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF has_lead_patch": {
+      "main": [
+        [
+          {
+            "node": "PATCH lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Context": {
+      "main": [
+        [
+          {
+            "node": "Switch attachments",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch attachments": {
+      "main": [
+        [
+          {
+            "node": "Download CV file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download voice file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF folder exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Load Session reload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV Translator": {
+      "main": [
+        [
+          {
+            "node": "CV Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive upload Video": {
+      "main": [
+        [
+          {
+            "node": "Set Video merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download voice file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST/PATCH SUMMARY note": {
+      "main": [
+        [
+          {
+            "node": "Pin SUMMARY note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive upload Google Doc": {
+      "main": [
+        [
+          {
+            "node": "Drive share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gpt-4.1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Output Parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF allow": {
+      "main": [
+        [
+          {
+            "node": "Load Chat History",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Load Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Chat History": {
+      "main": [
+        [
+          {
+            "node": "Wait For Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Session": {
+      "main": [
+        [
+          {
+            "node": "Wait For Data",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait For Data": {
+      "main": [
+        [
+          {
+            "node": "Build Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get AmoCRM Notes": {
+      "main": [
+        [
+          {
+            "node": "Notes prep",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save User Message": {
+      "main": [
+        [
+          {
+            "node": "Save AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Response": {
+      "main": [
+        [
+          {
+            "node": "Upsert Session",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF folder exists": {
+      "main": [
+        [
+          {
+            "node": "Merge video paths",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drive search folder (video)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive create folder (video)": {
+      "main": [
+        [
+          {
+            "node": "Drive share folder (video)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive share folder (video)": {
+      "main": [
+        [
+          {
+            "node": "Merge video paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge video paths": {
+      "main": [
+        [
+          {
+            "node": "Download video file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CV Extractor": {
+      "main": [
+        [
+          {
+            "node": "IF folder exists (CV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF folder exists (CV)": {
+      "main": [
+        [
+          {
+            "node": "Merge CV paths",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Drive search folder (CV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive create folder": {
+      "main": [
+        [
+          {
+            "node": "Drive share permissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive share permissions": {
+      "main": [
+        [
+          {
+            "node": "Merge CV paths",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Drive share file": {
+      "main": [
+        [
+          {
+            "node": "Set CV result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge CV paths": {
+      "main": [
+        [
+          {
+            "node": "Resolve CV folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve CV folder": {
+      "main": [
+        [
+          {
+            "node": "Drive upload Google Doc",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download video file": {
+      "main": [
+        [
+          {
+            "node": "Resolve Video folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Resolve Video folder": {
+      "main": [
+        [
+          {
+            "node": "Drive upload Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive search folder (CV)": {
+      "main": [
+        [
+          {
+            "node": "IF Drive search found (CV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Drive search found (CV)": {
+      "main": [
+        [
+          {
+            "node": "Merge CV paths",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Drive create folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Drive search folder (video)": {
+      "main": [
+        [
+          {
+            "node": "IF Drive search found (video)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Drive search found (video)": {
+      "main": [
+        [
+          {
+            "node": "Merge video paths",
+            "type": "main",
+            "index": 1
+          }
+        ],
+        [
+          {
+            "node": "Drive create folder (video)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set CV result": {
+      "main": [
+        [
+          {
+            "node": "Load Session reload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Voice merge": {
+      "main": [
+        [
+          {
+            "node": "Load Session reload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Video merge": {
+      "main": [
+        [
+          {
+            "node": "Load Session reload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Session reload": {
+      "main": [
+        [
+          {
+            "node": "Refresh Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Context": {
+      "main": [
+        [
+          {
+            "node": "Intake Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download CV file": {
+      "main": [
+        [
+          {
+            "node": "Switch by extension",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract CV text": {
+      "main": [
+        [
+          {
+            "node": "Merge CV text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge CV text": {
+      "main": [
+        [
+          {
+            "node": "CV Translator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DOCX to Text": {
+      "main": [
+        [
+          {
+            "node": "Merge CV text",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Switch by extension": {
+      "main": [
+        [
+          {
+            "node": "Extract CV text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "DOCX to Text",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Analyze an image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set image text": {
+      "main": [
+        [
+          {
+            "node": "Merge CV text",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Intake Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "CV Translator",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "CV Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Set Voice merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze an image": {
+      "main": [
+        [
+          {
+            "node": "Set image text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "staticData": null,
+  "pinData": {},
+  "activeVersionId": "bb9d1530-ad1e-48a0-b21d-56fc9414fe6f",
+  "versionCounter": 182,
+  "triggerCount": 1,
+  "tags": [
+    {
+      "updatedAt": "2026-06-09T09:40:02.444Z",
+      "createdAt": "2026-06-09T09:40:02.444Z",
+      "id": "EoA5U8eAL9Gp5lJv",
+      "name": "filipino-nannies"
+    }
+  ],
+  "shared": [
+    {
+      "updatedAt": "2026-06-09T09:40:08.045Z",
+      "createdAt": "2026-06-09T09:40:08.045Z",
+      "role": "workflow:owner",
+      "workflowId": "BODhKLM5JmcD5b9z",
+      "projectId": "rlXb5O6n1xPefq4s",
+      "project": {
+        "updatedAt": "2026-06-07T08:31:13.738Z",
+        "createdAt": "2026-06-07T08:30:43.328Z",
+        "id": "rlXb5O6n1xPefq4s",
+        "name": "Admin Admin <employmentmoscow@gmail.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "c4adae5e-92b2-4eae-82c6-cdfc94bb2bc3"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": "Version bb9d1530",
+    "description": ""
+  }
+}
