@@ -1,4 +1,4 @@
-<p>
+<p align="center">
   <img src="Union.svg" alt="Company logo" width="42" />
 </p>
 
@@ -82,18 +82,3 @@ Each interaction can update two CRM notes:
 ├── .env.example                 # Placeholder configuration names
 └── README.md
 ```
-
-## Security and privacy
-
-Do not commit:
-
-- Credentials, API keys, OAuth tokens, or `.env` files
-- Webhook paths and production workflow exports
-- Candidate names, messages, CVs, phone numbers, emails, or attachments
-- CRM account, pipeline, status, custom-field, and Drive folder IDs
-
-Use a separate private backup for production workflows. This public template is intentionally inactive and must be configured with your own services before use.
-
-## License
-
-This repository is provided as a portfolio and reference implementation. Add a license that matches your intended reuse terms before accepting contributions or distribution.
