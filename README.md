@@ -4,9 +4,7 @@
 
 # AI Recruitment Automation
 
-A production-inspired n8n workflow template for managing multilingual candidate conversations across CRM chat channels. It combines AI-assisted intake, persistent conversation state, document processing, and CRM updates into one operational workflow.
-
-This repository is a sanitized portfolio template. It contains no production credentials, customer data, webhook URLs, account IDs, or private file links.
+A production n8n workflow for Azumi Staff for managing multilingual candidate conversations across a CRM of your choice. It combines AI-assisted intake, persistent conversation state, document processing, and CRM updates into one operational workflow.
 
 ## What it does
 
@@ -46,7 +44,7 @@ Supabase stores both the chronological chat history and the latest structured ca
 
 ### Candidate documents
 
-Specialized branches process CVs and other attachments. The workflow can extract and translate CV content, retain only the information needed for recruitment, and store processed artifacts in a candidate-specific Google Drive folder.
+Specialized branches process CVs and other attachments. The workflow can extract and translate CV content, retain only the information needed for recruitment, and store processed artifacts in a candidate-specific Google Drive folder using a model of your choice. 
 
 ### Human-friendly CRM records
 
@@ -82,3 +80,7 @@ Each interaction can update two CRM notes:
 ├── .env.example                 # Placeholder configuration names
 └── README.md
 ```
+
+## Hosting
+
+Recommended to run on a dedicated Linux server. 
